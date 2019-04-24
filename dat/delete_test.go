@@ -40,3 +40,11 @@ func TestDeleteWhereExprSql(t *testing.T) {
 	assert.Equal(t, sql, `DELETE FROM a WHERE (foo = $1) AND (id=$2)`)
 	assert.Exactly(t, args, []interface{}{"bar", 100})
 }
+
+func TestDeleteSQLReturning(t *testing.T) {
+	expr := Expr("id=$1", 100)
+	sql, args, err := DeleteFrom("a").Where("foo = $1", "bar").Where(expr).Returning("id", "foo").ToSQL()
+	assert.NoError(t, err)
+	assert.Equal(t, sql, `DELETE FROM a WHERE (foo = $1) AND (id=$2) RETURNING id,foo`)
+	assert.Equal(t, []interface{}{"bar", 100}, args)
+}
