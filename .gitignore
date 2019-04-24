@@ -3,3 +3,13 @@ trace.log
 *.test
 godobin*
 vendor/
+
+# Vim temporary files
+*~
+
+# Vim swap files
+*.tmp
+*.swp
+*.swo
+*.swm
+*.swn
