@@ -60,7 +60,7 @@ func (b *DeleteBuilder) Where(whereSQLOrMap interface{}, args ...interface{}) *D
 
 // Returning sets the columns for the RETURNING clause
 func (b *DeleteBuilder) Returning(columns ...string) *DeleteBuilder {
-	b.returnings - columns
+	b.returnings = columns
 	return b
 }
 
