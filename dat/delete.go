@@ -9,6 +9,7 @@ type DeleteBuilder struct {
 	table          string
 	whereFragments []*whereFragment
 	isInterpolated bool
+	returnings     []string
 	scope          Scope
 	err            error
 }
@@ -57,6 +58,12 @@ func (b *DeleteBuilder) Where(whereSQLOrMap interface{}, args ...interface{}) *D
 	return b
 }
 
+// Returning sets the columns for the RETURNING clause
+func (b *DeleteBuilder) Returning(columns ...string) *DeleteBuilder {
+	b.returnings = columns
+	return b
+}
+
 // ToSQL serialized the DeleteBuilder to a SQL string
 // It returns the string with placeholders and a slice of query arguments
 func (b *DeleteBuilder) ToSQL() (string, []interface{}, error) {
@@ -90,6 +97,16 @@ func (b *DeleteBuilder) ToSQL() (string, []interface{}, error) {
 			return NewDatSQLErr(err)
 		}
 		writeScopeCondition(buf, whereFragment, &args, &placeholderStartPos)
+	}
+
+	// RETURNING clause
+	for i, c := range b.returnings {
+		if i == 0 {
+			buf.WriteString(" RETURNING ")
+		} else {
+			buf.WriteRune(',')
+		}
+		writeIdentifier(buf, c)
 	}
 
 	return buf.String(), args, nil
