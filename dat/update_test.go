@@ -23,28 +23,28 @@ func BenchmarkUpdateValueMapSql(b *testing.B) {
 }
 
 func TestUpdateAllToSql(t *testing.T) {
-	sql, args, err := Update("a").Set("b", 1).Set("c", 2).ToSQL()
+	sql, args, err := Update("a").Set("b", 1).Set("c", 2).From("d").ToSQL()
 
 	assert.NoError(t, err)
-	assert.Equal(t, sql, quoteSQL(`UPDATE a SET %s = $1, %s = $2`, "b", "c"))
+	assert.Equal(t, sql, quoteSQL(`UPDATE a SET %s = $1, %s = $2 FROM d`, "b", "c"))
 	assert.Equal(t, args, []interface{}{1, 2})
 }
 
 func TestUpdateSingleToSql(t *testing.T) {
-	sql, args, err := Update("a").Set("b", 1).Set("c", 2).Where("id = $1", 1).ToSQL()
+	sql, args, err := Update("a").Set("b", 1).Set("c", 2).From("d").Where("id = $1", 1).ToSQL()
 	assert.NoError(t, err)
-	assert.Equal(t, sql, quoteSQL(`UPDATE a SET %s = $1, %s = $2 WHERE (id = $3)`, "b", "c"))
+	assert.Equal(t, sql, quoteSQL(`UPDATE a SET %s = $1, %s = $2 FROM d WHERE (id = $3)`, "b", "c"))
 	assert.Equal(t, args, []interface{}{1, 2, 1})
 }
 
 func TestUpdateSetMapToSql(t *testing.T) {
-	sql, args, err := Update("a").SetMap(map[string]interface{}{"b": 1, "c": 2}).Where("id = $1", 1).ToSQL()
+	sql, args, err := Update("a").SetMap(map[string]interface{}{"b": 1, "c": 2}).From("d").Where("id = $1", 1).ToSQL()
 	assert.NoError(t, err)
 
-	if sql == quoteSQL(`UPDATE a SET %s = $1, %s = $2 WHERE (id = $3)`, "b", "c") {
+	if sql == quoteSQL(`UPDATE a SET %s = $1, %s = $2 FROM d WHERE (id = $3)`, "b", "c") {
 		assert.Equal(t, args, []interface{}{1, 2, 1})
 	} else {
-		assert.Equal(t, sql, quoteSQL(`UPDATE a SET %s = $1, %s = $2 WHERE (id = $3)`, "c", "b"))
+		assert.Equal(t, sql, quoteSQL(`UPDATE a SET %s = $1, %s = $2 FROM d WHERE (id = $3)`, "c", "b"))
 		assert.Equal(t, args, []interface{}{2, 1, 1})
 	}
 }
