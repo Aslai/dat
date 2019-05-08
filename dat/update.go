@@ -12,6 +12,7 @@ type UpdateBuilder struct {
 	isInterpolated bool
 	table          string
 	setClauses     []*setClause
+	fromList       string
 	whereFragments []*whereFragment
 	orderBys       []string
 	limitCount     uint64
@@ -94,6 +95,13 @@ func (b *UpdateBuilder) SetWhitelist(rec interface{}, whitelist ...string) *Upda
 		b.Set(columns[i], val)
 	}
 
+	return b
+}
+
+// From sets the fromList to UPDATE FROM. JOINs may also be defined here.
+// Allows columns from other tables to appear in the WHERE condition and the update expressions.
+func (b *UpdateBuilder) From(from string) *UpdateBuilder {
+	b.fromList = from
 	return b
 }
 
@@ -194,6 +202,11 @@ func (b *UpdateBuilder) ToSQL() (string, []interface{}, error) {
 			placeholderStartPos++
 			args = append(args, c.value)
 		}
+	}
+
+	if len(b.fromList) > 0 {
+		buf.WriteString(" FROM ")
+		buf.WriteString(b.fromList)
 	}
 
 	if b.scope == nil {
