@@ -120,46 +120,90 @@ func TestInsertDuplicateColumns(t *testing.T) {
 	assert.Equal(t, args, []interface{}{"open"})
 }
 
-func TestInsertOnConflictDoNothing(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflict("b").Do("NOTHING").ToSQL()
+func TestInsertOnConflictColumnDoNothing(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("NOTHING").ToSQL()
 	assert.NoError(t, err)
 
-	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (b) DO NOTHING", "b", "c"))
+	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO NOTHING", "b", "c", "b"))
 	assert.Equal(t, args, []interface{}{1, 2})
 }
 
-func TestInsertOnConflictDoUpdateSet(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflict("b").Do("UPDATE").Set("b", 50).ToSQL()
+func TestInsertOnConflictConstraintDoNothing(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("NOTHING").ToSQL()
+	assert.NoError(t, err)
+
+	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO NOTHING", "b", "c"))
+	assert.Equal(t, args, []interface{}{1, 2})
+}
+
+func TestInsertOnConflictColumnDoUpdateSet(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).ToSQL()
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (b) DO UPDATE SET %s = $3", "b", "c", "b"), sql)
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = $3", "b", "c", "b", "b"), sql)
 	assert.Equal(t, []interface{}{1, 2, 50}, args)
 }
 
-func TestInsertOnConflictDoUpdateSetExcluded(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflict("b").Do("UPDATE").Set("b", "EXCLUDED.b").ToSQL()
+func TestInsertOnConflictConstraintDoUpdateSet(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", 50).ToSQL()
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (b) DO UPDATE SET %s = %s", "b", "c", "b", "EXCLUDED.b"), sql)
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = $3", "b", "c", "b"), sql)
+	assert.Equal(t, []interface{}{1, 2, 50}, args)
+}
+
+func TestInsertOnConflictColumnDoUpdateSetExcluded(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s", "b", "c", "b", "b", "EXCLUDED.b"), sql)
 	assert.Equal(t, []interface{}{1, 2}, args)
 }
 
-func TestInsertOnConflictDoUpdateSetWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflict("b").Do("UPDATE").Set("b", 50).Where("a.b = $1", 10).ToSQL()
+func TestInsertOnConflictConstraintDoUpdateSetExcluded(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", "EXCLUDED.b").ToSQL()
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (b) DO UPDATE SET %s = $3 WHERE (%s = $4)", "b", "c", "b", "a.b"), sql)
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = %s", "b", "c", "b", "EXCLUDED.b"), sql)
+	assert.Equal(t, []interface{}{1, 2}, args)
+}
+
+func TestInsertOnConflictColumnDoUpdateSetWhere(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).Where("a.b = $1", 10).ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = $3 WHERE (%s = $4)", "b", "c", "b", "b", "a.b"), sql)
 	assert.Equal(t, []interface{}{1, 2, 50, 10}, args)
 }
 
-func TestInsertOnConflictDoUpdateSetExcludedWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflict("b").Do("UPDATE").Set("b", "EXCLUDED.b").Where("a.b = $1", 10).ToSQL()
+func TestInsertOnConflictConstraintDoUpdateSetWhere(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", 50).Where("a.b = $1", 10).ToSQL()
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (b) DO UPDATE SET %s = %s WHERE (%s = $3)", "b", "c", "b", "EXCLUDED.b", "a.b"), sql)
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = $3 WHERE (%s = $4)", "b", "c", "b", "a.b"), sql)
+	assert.Equal(t, []interface{}{1, 2, 50, 10}, args)
+}
+
+func TestInsertOnConflictColumnDoUpdateSetExcludedWhere(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").Where("a.b = $1", 10).ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s WHERE (%s = $3)", "b", "c", "b", "b", "EXCLUDED.b", "a.b"), sql)
+	assert.Equal(t, []interface{}{1, 2, 10}, args)
+}
+
+func TestInsertOnConflictConstraintDoUpdateSetExcludedWhere(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", "EXCLUDED.b").Where("a.b = $1", 10).ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = %s WHERE (%s = $3)", "b", "c", "b", "EXCLUDED.b", "a.b"), sql)
 	assert.Equal(t, []interface{}{1, 2, 10}, args)
 }

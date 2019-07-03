@@ -24,37 +24,6 @@ type InsertBuilder struct {
 	err              error
 }
 
-// The ON CONFLICT target can be a column or constraint
-type onConflictTargetType struct {
-	column     string
-	constraint string
-}
-
-// hasOneConflictTarget returns true if there exists one and only one of the possible conflict targets
-func (t *onConflictTargetType) hasOneConflictTarget() bool {
-	if t == nil {
-		return false
-	}
-
-	hasColumn := len(t.column) != 0
-	hasConstraint := len(t.constraint) != 0
-
-	return ((hasColumn && !hasConstraint) || (!hasColumn && hasConstraint))
-}
-
-// The ON CONFLICT action can DO NOTHING or DO UPDATE SET with an optional WHERE clause
-type onConflictActionType struct {
-	action         string
-	setClauses     []*setClause
-	whereFragments []*whereFragment
-}
-
-// ON CONFLICT keywords
-const nothingAction = "NOTHING"
-const updateAction = "UPDATE"
-const excludedColumn = "EXCLUDED"
-const onConstraintPrefix = "ON CONSTRAINT "
-
 // NewInsertBuilder creates a new InsertBuilder for the given table.
 func NewInsertBuilder(table string) *InsertBuilder {
 	if table == "" {
@@ -96,37 +65,51 @@ func (b *InsertBuilder) Record(record interface{}) *InsertBuilder {
 	return b
 }
 
-// OnConflict can be used to specify an alternative action to raising a unique constraint or exclusion constraint violation error
+// The ON CONFLICT clause can be used to specify an alternative action to raising a unique constraint or exclusion constraint violation error
 //     [ ON CONFLICT [ conflict_target ] conflict_action ]
 //		where conflict_target can be one of:
 //
 //			( { index_column_name | ( index_expression ) } [ COLLATE collation ] [ opclass ] [, ...] ) [ WHERE index_predicate ]
 //			ON CONSTRAINT constraint_name
-func (b *InsertBuilder) OnConflict(targets ...string) *InsertBuilder {
-	if len(targets) == 0 {
-		return b
-	} else if len(targets) > 1 {
-		if b.err == nil {
-			b.err = NewError("Specify zero or one conflict targets")
-		}
-		return b
+
+type onConflictTargetType struct {
+	column     string
+	constraint string
+}
+
+// hasOneConflictTarget returns true if there exists one and only one of the possible conflict targets
+func (t *onConflictTargetType) hasOneConflictTarget() bool {
+	if t == nil {
+		return false
 	}
 
-	target := targets[0]
-	if strings.HasPrefix(strings.ToUpper(target), onConstraintPrefix) {
-		constraint := strings.Split(target, " ")[2]
-		if len(constraint) == 0 {
-			if b.err == nil {
-				b.err = NewError("Missing constraint name")
-			}
-			return b
-		}
+	hasColumn := len(t.column) != 0
+	hasConstraint := len(t.constraint) != 0
 
-		b.onConflictTarget.constraint = onConstraintPrefix + constraint
-	} else {
-		b.onConflictTarget.column = target
-	}
+	return ((hasColumn && !hasConstraint) || (!hasColumn && hasConstraint))
+}
 
+// The ON CONFLICT action can DO NOTHING or DO UPDATE SET with an optional WHERE clause
+type onConflictActionType struct {
+	action         string
+	setClauses     []*setClause
+	whereFragments []*whereFragment
+}
+
+// ON CONFLICT keywords
+const nothingAction = "NOTHING"
+const updateAction = "UPDATE"
+const excludedColumn = "EXCLUDED"
+
+// OnConflictColumn is an ON CONFLICT clause with a column conflict_target
+func (b *InsertBuilder) OnConflictColumn(column string) *InsertBuilder {
+	b.onConflictTarget.column = column
+	return b
+}
+
+// OnConflictConstraint is an ON CONFLICT clause with a constraint conflict_target
+func (b *InsertBuilder) OnConflictConstraint(constraint string) *InsertBuilder {
+	b.onConflictTarget.constraint = constraint
 	return b
 }
 
@@ -315,7 +298,7 @@ func (b *InsertBuilder) ToSQL() (string, []interface{}, error) {
 		if len(b.onConflictTarget.column) > 0 {
 			sql.WriteString("(" + b.onConflictTarget.column + ")")
 		} else if len(b.onConflictTarget.constraint) > 0 {
-			sql.WriteString(" ON CONSTRAINT " + b.onConflictTarget.constraint)
+			sql.WriteString("ON CONSTRAINT " + b.onConflictTarget.constraint)
 		}
 
 		// conflict_action
