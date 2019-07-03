@@ -145,6 +145,15 @@ func TestInsertOnConflictColumnDoUpdateSet(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2, 50}, args)
 }
 
+func TestInsertOnConflictColumnDoUpdateMultiSet(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).Set("c", 100).ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = $3, %s = $4", "b", "c", "b", "b", "c"), sql)
+	assert.Equal(t, []interface{}{1, 2, 50, 100}, args)
+}
+
 func TestInsertOnConflictConstraintDoUpdateSet(t *testing.T) {
 	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", 50).ToSQL()
 
@@ -161,6 +170,33 @@ func TestInsertOnConflictColumnDoUpdateSetExcluded(t *testing.T) {
 
 	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s", "b", "c", "b", "b", "EXCLUDED.b"), sql)
 	assert.Equal(t, []interface{}{1, 2}, args)
+}
+
+func TestInsertOnConflictColumnDoUpdateMultiSetExcluded(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").Set("c", "EXCLUDED.c").ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s, %s = %s", "b", "c", "b", "b", "EXCLUDED.b", "c", "EXCLUDED.c"), sql)
+	assert.Equal(t, []interface{}{1, 2}, args)
+}
+
+func TestInsertOnConflictColumnDoUpdateMultiSetMixed(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").Set("c", 50).ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s, %s = $3", "b", "c", "b", "b", "EXCLUDED.b", "c"), sql)
+	assert.Equal(t, []interface{}{1, 2, 50}, args)
+}
+
+func TestInsertOnConflictColumnDoUpdateMultiSetMixedTwo(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).Set("c", "EXCLUDED.c").ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = $3, %s = %s", "b", "c", "b", "b", "c", "EXCLUDED.c"), sql)
+	assert.Equal(t, []interface{}{1, 2, 50}, args)
 }
 
 func TestInsertOnConflictConstraintDoUpdateSetExcluded(t *testing.T) {

@@ -311,7 +311,7 @@ func (b *InsertBuilder) ToSQL() (string, []interface{}, error) {
 			placeholderStartPos := int64(start)
 			for i, c := range b.onConflictAction.setClauses {
 				if i > 0 {
-					sql.WriteRune(',')
+					sql.WriteString(", ")
 				}
 
 				writeIdentifier(&sql, c.column)
