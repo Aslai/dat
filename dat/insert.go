@@ -24,7 +24,7 @@ type InsertBuilder struct {
 	err              error
 }
 
-// The ON CONFLICT target can be a column, constraint, or a WHERE clause predicate
+// The ON CONFLICT target can be a column or constraint
 type onConflictTargetType struct {
 	column     string
 	constraint string
@@ -49,10 +49,11 @@ type onConflictActionType struct {
 	whereFragments []*whereFragment
 }
 
-// Actions for ON CONFLICT
+// ON CONFLICT keywords
 const nothingAction = "NOTHING"
 const updateAction = "UPDATE"
 const excludedColumn = "EXCLUDED"
+const onConstraintPrefix = "ON CONSTRAINT "
 
 // NewInsertBuilder creates a new InsertBuilder for the given table.
 func NewInsertBuilder(table string) *InsertBuilder {
@@ -110,8 +111,6 @@ func (b *InsertBuilder) OnConflict(targets ...string) *InsertBuilder {
 		}
 		return b
 	}
-
-	const onConstraintPrefix = "ON CONSTRAINT "
 
 	target := targets[0]
 	if strings.HasPrefix(strings.ToUpper(target), onConstraintPrefix) {
