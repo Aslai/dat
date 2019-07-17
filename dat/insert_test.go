@@ -136,6 +136,14 @@ func TestInsertOnConflictConstraintDoNothing(t *testing.T) {
 	assert.Equal(t, args, []interface{}{1, 2})
 }
 
+func TestInsertOnConflictWhereDoNothing(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictWhere("b", "b > 0").Do("NOTHING").ToSQL()
+	assert.NoError(t, err)
+
+	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) WHERE %s DO NOTHING", "b", "c", "b", "b > 0"))
+	assert.Equal(t, args, []interface{}{1, 2})
+}
+
 func TestInsertOnConflictColumnDoUpdateSet(t *testing.T) {
 	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).ToSQL()
 

@@ -73,8 +73,9 @@ func (b *InsertBuilder) Record(record interface{}) *InsertBuilder {
 //			ON CONSTRAINT constraint_name
 
 type onConflictTargetType struct {
-	column     string
-	constraint string
+	column         string
+	constraint     string
+	indexPredicate string
 }
 
 // hasOneConflictTarget returns true if there exists one and only one of the possible conflict targets
@@ -101,6 +102,12 @@ const nothingAction = "NOTHING"
 const updateAction = "UPDATE"
 const excludedColumn = "EXCLUDED"
 
+//     [ ON CONFLICT [ conflict_target ] conflict_action ]
+//		where conflict_target can be one of:
+//
+//    ( { index_column_name | ( index_expression ) } [ COLLATE collation ] [ opclass ] [, ...] ) [ WHERE index_predicate ]
+//    ON CONSTRAINT constraint_name
+
 // OnConflictColumn is an ON CONFLICT clause with a column conflict_target
 func (b *InsertBuilder) OnConflictColumn(column string) *InsertBuilder {
 	b.onConflictTarget.column = column
@@ -110,6 +117,13 @@ func (b *InsertBuilder) OnConflictColumn(column string) *InsertBuilder {
 // OnConflictConstraint is an ON CONFLICT clause with a constraint conflict_target
 func (b *InsertBuilder) OnConflictConstraint(constraint string) *InsertBuilder {
 	b.onConflictTarget.constraint = constraint
+	return b
+}
+
+// OnConflictWhere is an ON CONFLICT clause with a column and index_predicate conflict_target
+func (b *InsertBuilder) OnConflictWhere(column string, indexPredicate string) *InsertBuilder {
+	b.onConflictTarget.column = column
+	b.onConflictTarget.indexPredicate = indexPredicate
 	return b
 }
 
@@ -297,6 +311,9 @@ func (b *InsertBuilder) ToSQL() (string, []interface{}, error) {
 		// conflict_target
 		if len(b.onConflictTarget.column) > 0 {
 			sql.WriteString("(" + b.onConflictTarget.column + ")")
+			if len(b.onConflictTarget.indexPredicate) > 0 {
+				sql.WriteString(" WHERE " + b.onConflictTarget.indexPredicate)
+			}
 		} else if len(b.onConflictTarget.constraint) > 0 {
 			sql.WriteString("ON CONSTRAINT " + b.onConflictTarget.constraint)
 		}
