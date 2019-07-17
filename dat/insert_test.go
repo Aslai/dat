@@ -121,7 +121,7 @@ func TestInsertDuplicateColumns(t *testing.T) {
 }
 
 func TestInsertOnConflictColumnDoNothing(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("NOTHING").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").ToSQL()
 	assert.NoError(t, err)
 
 	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO NOTHING", "b", "c", "b"))
@@ -129,7 +129,7 @@ func TestInsertOnConflictColumnDoNothing(t *testing.T) {
 }
 
 func TestInsertOnConflictConstraintDoNothing(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("NOTHING").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").ToSQL()
 	assert.NoError(t, err)
 
 	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO NOTHING", "b", "c"))
@@ -137,15 +137,15 @@ func TestInsertOnConflictConstraintDoNothing(t *testing.T) {
 }
 
 func TestInsertOnConflictWhereDoNothing(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictWhere("b", "b > 0").Do("NOTHING").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictWhere("b", "b > 0").ToSQL()
 	assert.NoError(t, err)
 
 	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) WHERE %s DO NOTHING", "b", "c", "b", "b > 0"))
 	assert.Equal(t, args, []interface{}{1, 2})
 }
 
-func TestInsertOnConflictColumnDoUpdateSet(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).ToSQL()
+func TestInsertOnConflictSet(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -153,8 +153,8 @@ func TestInsertOnConflictColumnDoUpdateSet(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2, 50}, args)
 }
 
-func TestInsertOnConflictColumnDoUpdateMultiSet(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).Set("c", 100).ToSQL()
+func TestInsertOnConflictSetMultiple(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).Set("c", 100).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -162,17 +162,8 @@ func TestInsertOnConflictColumnDoUpdateMultiSet(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2, 50, 100}, args)
 }
 
-func TestInsertOnConflictConstraintDoUpdateSet(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", 50).ToSQL()
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = $3", "b", "c", "b"), sql)
-	assert.Equal(t, []interface{}{1, 2, 50}, args)
-}
-
-func TestInsertOnConflictColumnDoUpdateSetExcluded(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").ToSQL()
+func TestInsertOnConflictSetExcluded(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -180,8 +171,8 @@ func TestInsertOnConflictColumnDoUpdateSetExcluded(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2}, args)
 }
 
-func TestInsertOnConflictColumnDoUpdateMultiSetExcluded(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").Set("c", "EXCLUDED.c").ToSQL()
+func TestInsertOnConflictSetExcludedMultiple(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").Set("c", "EXCLUDED.c").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -189,8 +180,8 @@ func TestInsertOnConflictColumnDoUpdateMultiSetExcluded(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2}, args)
 }
 
-func TestInsertOnConflictColumnDoUpdateMultiSetMixed(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").Set("c", 50).ToSQL()
+func TestInsertOnConflictSetMultipleMixed(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").Set("c", 50).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -198,8 +189,8 @@ func TestInsertOnConflictColumnDoUpdateMultiSetMixed(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2, 50}, args)
 }
 
-func TestInsertOnConflictColumnDoUpdateMultiSetMixedTwo(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).Set("c", "EXCLUDED.c").ToSQL()
+func TestInsertOnConflictSetMultipleMixedTwo(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).Set("c", "EXCLUDED.c").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -207,17 +198,8 @@ func TestInsertOnConflictColumnDoUpdateMultiSetMixedTwo(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2, 50}, args)
 }
 
-func TestInsertOnConflictConstraintDoUpdateSetExcluded(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", "EXCLUDED.b").ToSQL()
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = %s", "b", "c", "b", "EXCLUDED.b"), sql)
-	assert.Equal(t, []interface{}{1, 2}, args)
-}
-
-func TestInsertOnConflictColumnDoUpdateSetWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", 50).Where("a.b = $1", 10).ToSQL()
+func TestInsertOnConflictSetWhere(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).Where("a.b = $1", 10).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -225,29 +207,11 @@ func TestInsertOnConflictColumnDoUpdateSetWhere(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2, 50, 10}, args)
 }
 
-func TestInsertOnConflictConstraintDoUpdateSetWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", 50).Where("a.b = $1", 10).ToSQL()
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = $3 WHERE (%s = $4)", "b", "c", "b", "a.b"), sql)
-	assert.Equal(t, []interface{}{1, 2, 50, 10}, args)
-}
-
-func TestInsertOnConflictColumnDoUpdateSetExcludedWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Do("UPDATE").Set("b", "EXCLUDED.b").Where("a.b = $1", 10).ToSQL()
+func TestInsertOnConflictSetExcludedWhere(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").Where("a.b = $1", 10).ToSQL()
 
 	assert.NoError(t, err)
 
 	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s WHERE (%s = $3)", "b", "c", "b", "b", "EXCLUDED.b", "a.b"), sql)
-	assert.Equal(t, []interface{}{1, 2, 10}, args)
-}
-
-func TestInsertOnConflictConstraintDoUpdateSetExcludedWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictConstraint("test_constraint").Do("UPDATE").Set("b", "EXCLUDED.b").Where("a.b = $1", 10).ToSQL()
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT ON CONSTRAINT test_constraint DO UPDATE SET %s = %s WHERE (%s = $3)", "b", "c", "b", "EXCLUDED.b", "a.b"), sql)
 	assert.Equal(t, []interface{}{1, 2, 10}, args)
 }

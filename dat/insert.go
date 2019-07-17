@@ -5,7 +5,6 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 // InsertBuilder contains the clauses for an INSERT statement
@@ -98,7 +97,6 @@ type onConflictActionType struct {
 }
 
 // ON CONFLICT keywords
-const nothingAction = "NOTHING"
 const updateAction = "UPDATE"
 const excludedColumn = "EXCLUDED"
 
@@ -127,7 +125,6 @@ func (b *InsertBuilder) OnConflictWhere(column string, indexPredicate string) *I
 	return b
 }
 
-// Do is the conflict_action clause of an ON CONFLICT statement
 //     [ ON CONFLICT [ conflict_target ] conflict_action ]
 //		and conflict_action is one of:
 //
@@ -137,41 +134,23 @@ func (b *InsertBuilder) OnConflictWhere(column string, indexPredicate string) *I
 //							( column_name [, ...] ) = ( sub-SELECT )
 //						  } [, ...]
 //					  [ WHERE condition ]
-func (b *InsertBuilder) Do(action string) *InsertBuilder {
-	actionUpper := strings.ToUpper(action)
-	switch actionUpper {
-	case nothingAction, updateAction:
-		b.onConflictAction.action = actionUpper
-	default:
-		if b.err == nil {
-			b.err = NewError("conflict_action type must be NOTHING or UPDATE")
-		}
-		return b
-	}
 
-	if !b.onConflictTarget.hasOneConflictTarget() && b.onConflictAction.action != nothingAction {
+// Set may initiate a DO UPDATE conflict_action and sets a column/value pair
+// If never called the conflict_action will default to DO NOTHING
+func (b *InsertBuilder) Set(column string, value interface{}) *InsertBuilder {
+	if !b.onConflictTarget.hasOneConflictTarget() {
 		if b.err == nil {
 			b.err = NewError("A conflict_target must be provided for ON CONFLICT DO UPDATE")
 		}
 		return b
 	}
 
-	return b
-}
-
-// Set appends a column/value pair following a conflict_action of DO UPDATE
-func (b *InsertBuilder) Set(column string, value interface{}) *InsertBuilder {
-	if b.onConflictAction.action != updateAction {
-		if b.err == nil {
-			b.err = NewError("conflict_action must be equal to UPDATE")
-		}
-		return b
-	}
+	b.onConflictAction.action = updateAction
 	b.onConflictAction.setClauses = append(b.onConflictAction.setClauses, &setClause{column: column, value: value})
 	return b
 }
 
-// SetMap appends the elements of the map as column/value pairs following a conflict_action of DO UPDATE
+// SetMap may initiate a DO UPDATE conflict_action and sets the elements of the map as column/value pairs
 func (b *InsertBuilder) SetMap(clauses map[string]interface{}) *InsertBuilder {
 	for col, val := range clauses {
 		b = b.Set(col, val)
@@ -319,9 +298,9 @@ func (b *InsertBuilder) ToSQL() (string, []interface{}, error) {
 		}
 
 		// conflict_action
-		if b.onConflictAction.action == nothingAction {
+		if b.onConflictAction.action != updateAction {
 			sql.WriteString(" DO NOTHING")
-		} else if b.onConflictAction.action == updateAction {
+		} else {
 			sql.WriteString(" DO UPDATE SET ")
 
 			// Build DO UPDATE SET clause SQL with placeholders and add values to args
