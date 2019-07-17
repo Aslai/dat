@@ -120,11 +120,19 @@ func TestInsertDuplicateColumns(t *testing.T) {
 	assert.Equal(t, args, []interface{}{"open"})
 }
 
-func TestInsertOnConflictColumnDoNothing(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").ToSQL()
+func TestInsertOnConflictColumnsDoNothing(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").ToSQL()
 	assert.NoError(t, err)
 
 	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO NOTHING", "b", "c", "b"))
+	assert.Equal(t, args, []interface{}{1, 2})
+}
+
+func TestInsertOnConflictColumnsMultipleDoNothing(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b", "c").ToSQL()
+	assert.NoError(t, err)
+
+	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s, %s) DO NOTHING", "b", "c", "b", "c"))
 	assert.Equal(t, args, []interface{}{1, 2})
 }
 
@@ -137,7 +145,7 @@ func TestInsertOnConflictConstraintDoNothing(t *testing.T) {
 }
 
 func TestInsertOnConflictWhereDoNothing(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictWhere("b", "b > 0").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictWhere("b > 0", "b").ToSQL()
 	assert.NoError(t, err)
 
 	assert.Equal(t, sql, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) WHERE %s DO NOTHING", "b", "c", "b", "b > 0"))
@@ -145,7 +153,7 @@ func TestInsertOnConflictWhereDoNothing(t *testing.T) {
 }
 
 func TestInsertOnConflictSet(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").Set("b", 50).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -154,7 +162,7 @@ func TestInsertOnConflictSet(t *testing.T) {
 }
 
 func TestInsertOnConflictSetMultiple(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).Set("c", 100).ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").Set("b", 50).Set("c", 100).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -163,7 +171,7 @@ func TestInsertOnConflictSetMultiple(t *testing.T) {
 }
 
 func TestInsertOnConflictSetExcluded(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").SetExcluded("b").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -172,7 +180,7 @@ func TestInsertOnConflictSetExcluded(t *testing.T) {
 }
 
 func TestInsertOnConflictSetExcludedMultiple(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b, c").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").SetExcluded("b, c").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -181,7 +189,7 @@ func TestInsertOnConflictSetExcludedMultiple(t *testing.T) {
 }
 
 func TestInsertOnConflictSetExcludedMultipleTwo(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b", "c").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").SetExcluded("b", "c").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -190,7 +198,7 @@ func TestInsertOnConflictSetExcludedMultipleTwo(t *testing.T) {
 }
 
 func TestInsertOnConflictSetMultipleMixed(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b").Set("c", 50).ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").SetExcluded("b").Set("c", 50).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -199,7 +207,7 @@ func TestInsertOnConflictSetMultipleMixed(t *testing.T) {
 }
 
 func TestInsertOnConflictSetMultipleMixedTwo(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).SetExcluded("c").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").Set("b", 50).SetExcluded("c").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -208,7 +216,7 @@ func TestInsertOnConflictSetMultipleMixedTwo(t *testing.T) {
 }
 
 func TestInsertOnConflictSetWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).Where("a.b = $1", 10).ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").Set("b", 50).Where("a.b = $1", 10).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -217,7 +225,7 @@ func TestInsertOnConflictSetWhere(t *testing.T) {
 }
 
 func TestInsertOnConflictSetExcludedWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b").Where("a.b = $1", 10).ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").SetExcluded("b").Where("a.b = $1", 10).ToSQL()
 
 	assert.NoError(t, err)
 

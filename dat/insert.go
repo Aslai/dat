@@ -73,7 +73,7 @@ func (b *InsertBuilder) Record(record interface{}) *InsertBuilder {
 //			ON CONSTRAINT constraint_name
 
 type onConflictTargetType struct {
-	column         string
+	columns        []string
 	constraint     string
 	indexPredicate string
 }
@@ -84,10 +84,10 @@ func (t *onConflictTargetType) hasOneConflictTarget() bool {
 		return false
 	}
 
-	hasColumn := len(t.column) != 0
+	hasColumns := len(t.columns) != 0
 	hasConstraint := len(t.constraint) != 0
 
-	return ((hasColumn && !hasConstraint) || (!hasColumn && hasConstraint))
+	return ((hasColumns && !hasConstraint) || (!hasColumns && hasConstraint))
 }
 
 // The ON CONFLICT action can DO NOTHING or DO UPDATE SET with an optional WHERE clause
@@ -107,21 +107,46 @@ const excludedColumn = "EXCLUDED"
 //    ( { index_column_name | ( index_expression ) } [ COLLATE collation ] [ opclass ] [, ...] ) [ WHERE index_predicate ]
 //    ON CONSTRAINT constraint_name
 
-// OnConflictColumn is an ON CONFLICT clause with a column conflict_target
-func (b *InsertBuilder) OnConflictColumn(column string) *InsertBuilder {
-	b.onConflictTarget.column = column
+// OnConflictColumns is an ON CONFLICT clause with column names as the conflict_target
+func (b *InsertBuilder) OnConflictColumns(columns ...string) *InsertBuilder {
+	if len(columns) == 0 {
+		if b.err == nil {
+			b.err = NewError("Must specify at least one column")
+		}
+		return b
+	}
+
+	for _, col := range columns {
+		splitCol := strings.Split(col, ",")
+		for _, c := range splitCol {
+			b.onConflictTarget.columns = append(b.onConflictTarget.columns, strings.TrimSpace(c))
+		}
+	}
 	return b
 }
 
-// OnConflictConstraint is an ON CONFLICT clause with a constraint conflict_target
+// OnConflictConstraint is an ON CONFLICT clause with a constraint as the conflict_target
 func (b *InsertBuilder) OnConflictConstraint(constraint string) *InsertBuilder {
 	b.onConflictTarget.constraint = constraint
 	return b
 }
 
-// OnConflictWhere is an ON CONFLICT clause with a column and index_predicate conflict_target
-func (b *InsertBuilder) OnConflictWhere(column string, indexPredicate string) *InsertBuilder {
-	b.onConflictTarget.column = column
+// OnConflictWhere is an ON CONFLICT clause with column names and index_predicate as the conflict_target
+func (b *InsertBuilder) OnConflictWhere(indexPredicate string, columns ...string) *InsertBuilder {
+	if len(columns) == 0 {
+		if b.err == nil {
+			b.err = NewError("Must specify at least one column")
+		}
+		return b
+	}
+
+	for _, col := range columns {
+		splitCol := strings.Split(col, ",")
+		for _, c := range splitCol {
+			b.onConflictTarget.columns = append(b.onConflictTarget.columns, strings.TrimSpace(c))
+		}
+	}
+
 	b.onConflictTarget.indexPredicate = indexPredicate
 	return b
 }
@@ -321,8 +346,8 @@ func (b *InsertBuilder) ToSQL() (string, []interface{}, error) {
 		sql.WriteString(" ON CONFLICT ")
 
 		// conflict_target
-		if len(b.onConflictTarget.column) > 0 {
-			sql.WriteString("(" + b.onConflictTarget.column + ")")
+		if len(b.onConflictTarget.columns) > 0 {
+			sql.WriteString("(" + strings.Join(b.onConflictTarget.columns, ", ") + ")")
 			if len(b.onConflictTarget.indexPredicate) > 0 {
 				sql.WriteString(" WHERE " + b.onConflictTarget.indexPredicate)
 			}
