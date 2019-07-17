@@ -163,7 +163,7 @@ func TestInsertOnConflictSetMultiple(t *testing.T) {
 }
 
 func TestInsertOnConflictSetExcluded(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -172,7 +172,16 @@ func TestInsertOnConflictSetExcluded(t *testing.T) {
 }
 
 func TestInsertOnConflictSetExcludedMultiple(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").Set("c", "EXCLUDED.c").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b, c").ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s, %s = %s", "b", "c", "b", "b", "EXCLUDED.b", "c", "EXCLUDED.c"), sql)
+	assert.Equal(t, []interface{}{1, 2}, args)
+}
+
+func TestInsertOnConflictSetExcludedMultipleTwo(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b", "c").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -181,7 +190,7 @@ func TestInsertOnConflictSetExcludedMultiple(t *testing.T) {
 }
 
 func TestInsertOnConflictSetMultipleMixed(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").Set("c", 50).ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b").Set("c", 50).ToSQL()
 
 	assert.NoError(t, err)
 
@@ -190,7 +199,7 @@ func TestInsertOnConflictSetMultipleMixed(t *testing.T) {
 }
 
 func TestInsertOnConflictSetMultipleMixedTwo(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).Set("c", "EXCLUDED.c").ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", 50).SetExcluded("c").ToSQL()
 
 	assert.NoError(t, err)
 
@@ -208,7 +217,7 @@ func TestInsertOnConflictSetWhere(t *testing.T) {
 }
 
 func TestInsertOnConflictSetExcludedWhere(t *testing.T) {
-	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").Set("b", "EXCLUDED.b").Where("a.b = $1", 10).ToSQL()
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumn("b").SetExcluded("b").Where("a.b = $1", 10).ToSQL()
 
 	assert.NoError(t, err)
 

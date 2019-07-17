@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 // InsertBuilder contains the clauses for an INSERT statement
@@ -145,8 +146,40 @@ func (b *InsertBuilder) Set(column string, value interface{}) *InsertBuilder {
 		return b
 	}
 
-	b.onConflictAction.action = updateAction
+	if b.onConflictAction.action != updateAction {
+		b.onConflictAction.action = updateAction
+	}
+
 	b.onConflictAction.setClauses = append(b.onConflictAction.setClauses, &setClause{column: column, value: value})
+	return b
+}
+
+// SetExcluded may initiate a DO UPDATE conflict_action and sets one or more columns to the values proposed for insertion
+// This is a shortcut to setting multiple columns to their proposed insertion values as marked in the special excluded table
+// e.g. rather than Set("a", "EXCLUDED.a").Set("b", "EXCLUDED.b") you may call SetExcluded("a", "b") or SetExcluded("a, b")
+func (b *InsertBuilder) SetExcluded(columns ...string) *InsertBuilder {
+	if !b.onConflictTarget.hasOneConflictTarget() {
+		if b.err == nil {
+			b.err = NewError("A conflict_target must be provided for ON CONFLICT DO UPDATE")
+		}
+		return b
+	}
+
+	if len(columns) == 0 {
+		if b.err == nil {
+			b.err = NewError("Must specify at least one column")
+		}
+		return b
+	}
+
+	// Columns may be comma-delimited strings and/or multiple strings
+	for _, col := range columns {
+		splitCol := strings.Split(col, ",")
+		for _, c := range splitCol {
+			trimC := strings.TrimSpace(c)
+			b.Set(trimC, "EXCLUDED."+trimC)
+		}
+	}
 	return b
 }
 
