@@ -99,7 +99,6 @@ type onConflictActionType struct {
 
 // ON CONFLICT keywords
 const updateAction = "UPDATE"
-const excludedColumn = "EXCLUDED"
 
 //     [ ON CONFLICT [ conflict_target ] conflict_action ]
 //		where conflict_target can be one of:
@@ -202,7 +201,7 @@ func (b *InsertBuilder) SetExcluded(columns ...string) *InsertBuilder {
 		splitCol := strings.Split(col, ",")
 		for _, c := range splitCol {
 			trimC := strings.TrimSpace(c)
-			b.Set(trimC, "EXCLUDED."+trimC)
+			b.Set(trimC, EXCLUDED+UnsafeString(trimC))
 		}
 	}
 	return b
@@ -377,10 +376,12 @@ func (b *InsertBuilder) ToSQL() (string, []interface{}, error) {
 					remapPlaceholders(&sql, e.Sql, startPos)
 					args = append(args, e.Args...)
 					placeholderStartPos += int64(len(e.Args))
-				} else if s, ok := c.value.(string); ok && s == excludedColumn+"."+c.column {
-					// Leave EXCLUDED.column value unquoted
+				} else if s, ok := c.value.(UnsafeString); ok {
 					sql.WriteString(" = ")
-					sql.WriteString(s)
+					sql.WriteString(string(s))
+					if s == EXCLUDED {
+						sql.WriteString(c.column)
+					}
 				} else {
 					if placeholderStartPos < maxLookup {
 						sql.WriteString(equalsPlaceholderTab[placeholderStartPos])

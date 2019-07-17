@@ -179,6 +179,24 @@ func TestInsertOnConflictSetExcluded(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 2}, args)
 }
 
+func TestInsertOnConflictSetExcludedTwo(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").Set("b", EXCLUDED).ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s", "b", "c", "b", "b", "EXCLUDED.b"), sql)
+	assert.Equal(t, []interface{}{1, 2}, args)
+}
+
+func TestInsertOnConflictSetUnsafe(t *testing.T) {
+	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").Set("b", UnsafeString("foo.bar")).ToSQL()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, quoteSQL("INSERT INTO a (%s,%s) VALUES ($1,$2) ON CONFLICT (%s) DO UPDATE SET %s = %s", "b", "c", "b", "b", "foo.bar"), sql)
+	assert.Equal(t, []interface{}{1, 2}, args)
+}
+
 func TestInsertOnConflictSetExcludedMultiple(t *testing.T) {
 	sql, args, err := InsertInto("a").Columns("b", "c").Values(1, 2).OnConflictColumns("b").SetExcluded("b, c").ToSQL()
 

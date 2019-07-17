@@ -33,6 +33,9 @@ func (u UnsafeString) Value() (driver.Value, error) {
 // DEFAULT SQL value
 const DEFAULT = UnsafeString("DEFAULT")
 
+// EXCLUDED SQL value in reference to special table for ON CONFLICT
+const EXCLUDED = UnsafeString("EXCLUDED.")
+
 // NOW SQL value
 const NOW = UnsafeString("NOW()")
 
