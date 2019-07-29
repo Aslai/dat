@@ -4,20 +4,24 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // InsertBuilder contains the clauses for an INSERT statement
 type InsertBuilder struct {
 	Execer
 
-	isInterpolated bool
-	table          string
-	cols           []string
-	isBlacklist    bool
-	vals           [][]interface{}
-	records        []interface{}
-	returnings     []string
-	err            error
+	isInterpolated   bool
+	table            string
+	cols             []string
+	isBlacklist      bool
+	vals             [][]interface{}
+	records          []interface{}
+	onConflictTarget *onConflictTargetType
+	onConflictAction *onConflictActionType
+	returnings       []string
+	err              error
 }
 
 // NewInsertBuilder creates a new InsertBuilder for the given table.
@@ -26,7 +30,7 @@ func NewInsertBuilder(table string) *InsertBuilder {
 		logger.Error("InsertInto requires a table name.")
 		return nil
 	}
-	return &InsertBuilder{table: table, isInterpolated: EnableInterpolation}
+	return &InsertBuilder{table: table, isInterpolated: EnableInterpolation, onConflictTarget: &onConflictTargetType{}, onConflictAction: &onConflictActionType{}}
 }
 
 // Columns appends columns to insert in the statement
@@ -61,8 +65,171 @@ func (b *InsertBuilder) Record(record interface{}) *InsertBuilder {
 	return b
 }
 
-// OnConflict ??
-func (b *InsertBuilder) OnConflict() *InsertBuilder {
+// The ON CONFLICT clause can be used to specify an alternative action to raising a unique constraint or exclusion constraint violation error
+//     [ ON CONFLICT [ conflict_target ] conflict_action ]
+//		where conflict_target can be one of:
+//
+//			( { index_column_name | ( index_expression ) } [ COLLATE collation ] [ opclass ] [, ...] ) [ WHERE index_predicate ]
+//			ON CONSTRAINT constraint_name
+
+type onConflictTargetType struct {
+	columns        []string
+	constraint     string
+	indexPredicate string
+}
+
+// hasOneConflictTarget returns true if there exists one and only one of the possible conflict targets
+func (t *onConflictTargetType) hasOneConflictTarget() bool {
+	if t == nil {
+		return false
+	}
+
+	hasColumns := len(t.columns) != 0
+	hasConstraint := len(t.constraint) != 0
+
+	return ((hasColumns && !hasConstraint) || (!hasColumns && hasConstraint))
+}
+
+// The ON CONFLICT action can DO NOTHING or DO UPDATE SET with an optional WHERE clause
+type onConflictActionType struct {
+	action         string
+	setClauses     []*setClause
+	whereFragments []*whereFragment
+}
+
+// ON CONFLICT keywords
+const updateAction = "UPDATE"
+
+//     [ ON CONFLICT [ conflict_target ] conflict_action ]
+//		where conflict_target can be one of:
+//
+//    ( { index_column_name | ( index_expression ) } [ COLLATE collation ] [ opclass ] [, ...] ) [ WHERE index_predicate ]
+//    ON CONSTRAINT constraint_name
+
+// OnConflictColumns is an ON CONFLICT clause with column names as the conflict_target
+func (b *InsertBuilder) OnConflictColumns(columns ...string) *InsertBuilder {
+	if len(columns) == 0 {
+		if b.err == nil {
+			b.err = NewError("Must specify at least one column")
+		}
+		return b
+	}
+
+	for _, col := range columns {
+		splitCol := strings.Split(col, ",")
+		for _, c := range splitCol {
+			b.onConflictTarget.columns = append(b.onConflictTarget.columns, strings.TrimSpace(c))
+		}
+	}
+	return b
+}
+
+// OnConflictConstraint is an ON CONFLICT clause with a constraint as the conflict_target
+func (b *InsertBuilder) OnConflictConstraint(constraint string) *InsertBuilder {
+	b.onConflictTarget.constraint = constraint
+	return b
+}
+
+// OnConflictWhere is an ON CONFLICT clause with column names and index_predicate as the conflict_target
+func (b *InsertBuilder) OnConflictWhere(indexPredicate string, columns ...string) *InsertBuilder {
+	if len(columns) == 0 {
+		if b.err == nil {
+			b.err = NewError("Must specify at least one column")
+		}
+		return b
+	}
+
+	for _, col := range columns {
+		splitCol := strings.Split(col, ",")
+		for _, c := range splitCol {
+			b.onConflictTarget.columns = append(b.onConflictTarget.columns, strings.TrimSpace(c))
+		}
+	}
+
+	b.onConflictTarget.indexPredicate = indexPredicate
+	return b
+}
+
+//     [ ON CONFLICT [ conflict_target ] conflict_action ]
+//		and conflict_action is one of:
+//
+//			DO NOTHING
+//			DO UPDATE SET { column_name = { expression | DEFAULT } |
+//							( column_name [, ...] ) = ( { expression | DEFAULT } [, ...] ) |
+//							( column_name [, ...] ) = ( sub-SELECT )
+//						  } [, ...]
+//					  [ WHERE condition ]
+
+// Set may initiate a DO UPDATE conflict_action and sets a column/value pair
+// If never called the conflict_action will default to DO NOTHING
+func (b *InsertBuilder) Set(column string, value interface{}) *InsertBuilder {
+	if !b.onConflictTarget.hasOneConflictTarget() {
+		if b.err == nil {
+			b.err = NewError("A conflict_target must be provided for ON CONFLICT DO UPDATE")
+		}
+		return b
+	}
+
+	if b.onConflictAction.action != updateAction {
+		b.onConflictAction.action = updateAction
+	}
+
+	b.onConflictAction.setClauses = append(b.onConflictAction.setClauses, &setClause{column: column, value: value})
+	return b
+}
+
+// SetExcluded may initiate a DO UPDATE conflict_action and sets one or more columns to the values proposed for insertion
+// This is a shortcut to setting multiple columns to their proposed insertion values as marked in the special excluded table
+// e.g. rather than Set("a", "EXCLUDED.a").Set("b", "EXCLUDED.b") you may call SetExcluded("a", "b") or SetExcluded("a, b")
+func (b *InsertBuilder) SetExcluded(columns ...string) *InsertBuilder {
+	if !b.onConflictTarget.hasOneConflictTarget() {
+		if b.err == nil {
+			b.err = NewError("A conflict_target must be provided for ON CONFLICT DO UPDATE")
+		}
+		return b
+	}
+
+	if len(columns) == 0 {
+		if b.err == nil {
+			b.err = NewError("Must specify at least one column")
+		}
+		return b
+	}
+
+	// Columns may be comma-delimited strings and/or multiple strings
+	for _, col := range columns {
+		splitCol := strings.Split(col, ",")
+		for _, c := range splitCol {
+			trimC := strings.TrimSpace(c)
+			b.Set(trimC, EXCLUDED+UnsafeString(trimC))
+		}
+	}
+	return b
+}
+
+// SetMap may initiate a DO UPDATE conflict_action and sets the elements of the map as column/value pairs
+func (b *InsertBuilder) SetMap(clauses map[string]interface{}) *InsertBuilder {
+	for col, val := range clauses {
+		b = b.Set(col, val)
+	}
+	return b
+}
+
+// Where appends a WHERE clause following a conflict_action of DO UPDATE
+func (b *InsertBuilder) Where(whereSQLOrMap interface{}, args ...interface{}) *InsertBuilder {
+	if b.onConflictAction.action != updateAction {
+		if b.err == nil {
+			b.err = NewError("conflict_action must be equal to UPDATE")
+		}
+		return b
+	}
+
+	fragment, err := newWhereFragment(whereSQLOrMap, args)
+	if err != nil {
+		b.err = err
+	} else {
+		b.onConflictAction.whereFragments = append(b.onConflictAction.whereFragments, fragment)
+	}
 	return b
 }
 
@@ -170,6 +337,68 @@ func (b *InsertBuilder) ToSQL() (string, []interface{}, error) {
 		for _, v := range vals {
 			args = append(args, v)
 			start++
+		}
+	}
+
+	// On conflict clause
+	if b.onConflictTarget.hasOneConflictTarget() {
+		sql.WriteString(" ON CONFLICT ")
+
+		// conflict_target
+		if len(b.onConflictTarget.columns) > 0 {
+			sql.WriteString("(" + strings.Join(b.onConflictTarget.columns, ", ") + ")")
+			if len(b.onConflictTarget.indexPredicate) > 0 {
+				sql.WriteString(" WHERE " + b.onConflictTarget.indexPredicate)
+			}
+		} else if len(b.onConflictTarget.constraint) > 0 {
+			sql.WriteString("ON CONSTRAINT " + b.onConflictTarget.constraint)
+		}
+
+		// conflict_action
+		if b.onConflictAction.action != updateAction {
+			sql.WriteString(" DO NOTHING")
+		} else {
+			sql.WriteString(" DO UPDATE SET ")
+
+			// Build DO UPDATE SET clause SQL with placeholders and add values to args
+			placeholderStartPos := int64(start)
+			for i, c := range b.onConflictAction.setClauses {
+				if i > 0 {
+					sql.WriteString(", ")
+				}
+
+				writeIdentifier(&sql, c.column)
+
+				if e, ok := c.value.(*Expression); ok {
+					startPos := placeholderStartPos
+					sql.WriteString(" = ")
+					// map relative $1, $2 placeholders to absolute
+					remapPlaceholders(&sql, e.Sql, startPos)
+					args = append(args, e.Args...)
+					placeholderStartPos += int64(len(e.Args))
+				} else if s, ok := c.value.(UnsafeString); ok {
+					sql.WriteString(" = ")
+					sql.WriteString(string(s))
+					if s == EXCLUDED {
+						sql.WriteString(c.column)
+					}
+				} else {
+					if placeholderStartPos < maxLookup {
+						sql.WriteString(equalsPlaceholderTab[placeholderStartPos])
+					} else {
+						sql.WriteString(" = $")
+						sql.WriteString(strconv.FormatInt(placeholderStartPos, 10))
+					}
+					placeholderStartPos++
+					args = append(args, c.value)
+				}
+			}
+
+			// DO UPDATE SET .. WHERE clause
+			if len(b.onConflictAction.whereFragments) > 0 {
+				sql.WriteString(" WHERE ")
+				writeAndFragmentsToSQL(&sql, b.onConflictAction.whereFragments, &args, &placeholderStartPos)
+			}
 		}
 	}
 

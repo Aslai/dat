@@ -18,12 +18,34 @@ func TestNullStringFrom(t *testing.T) {
 	assert.Equal(t, n.String, v)
 }
 
+func TestNullIfString(t *testing.T) {
+	v := "foo"
+	n := NullIfString(v, "")
+	m := NullIfString(v, v)
+
+	assert.True(t, n.Valid)
+	assert.Equal(t, n.String, v)
+	assert.False(t, m.Valid)
+	assert.Equal(t, m.String, v)
+}
+
 func TestNullFloat64From(t *testing.T) {
 	v := 42.2
 	n := NullFloat64From(v)
 
 	assert.True(t, n.Valid)
 	assert.Equal(t, n.Float64, v)
+}
+
+func TestNullIfFloat64(t *testing.T) {
+	v := 42.2
+	n := NullIfFloat64(v, 0.0)
+	m := NullIfFloat64(v, v)
+
+	assert.True(t, n.Valid)
+	assert.Equal(t, n.Float64, v)
+	assert.False(t, m.Valid)
+	assert.Equal(t, m.Float64, v)
 }
 
 func TestNullInt64From(t *testing.T) {
@@ -34,6 +56,17 @@ func TestNullInt64From(t *testing.T) {
 	assert.Equal(t, n.Int64, v)
 }
 
+func TestNullIfInt64(t *testing.T) {
+	v := int64(400)
+	n := NullIfInt64(v, 0)
+	m := NullIfInt64(v, v)
+
+	assert.True(t, n.Valid)
+	assert.Equal(t, n.Int64, v)
+	assert.False(t, m.Valid)
+	assert.Equal(t, m.Int64, v)
+}
+
 func TestNullTimeFrom(t *testing.T) {
 	v := time.Now()
 	n := NullTimeFrom(v)
@@ -42,12 +75,35 @@ func TestNullTimeFrom(t *testing.T) {
 	assert.Equal(t, n.Time, v)
 }
 
+func TestNullIfTime(t *testing.T) {
+	v := time.Now()
+	var when time.Time
+	n := NullIfTime(v, when)
+	m := NullIfTime(v, v)
+
+	assert.True(t, n.Valid)
+	assert.Equal(t, n.Time, v)
+	assert.False(t, m.Valid)
+	assert.Equal(t, m.Time, v)
+}
+
 func TestNullBoolFrom(t *testing.T) {
 	v := false
 	n := NullBoolFrom(v)
 
 	assert.True(t, n.Valid)
 	assert.Equal(t, n.Bool, v)
+}
+
+func TestNullIfBool(t *testing.T) {
+	v := false
+	n := NullIfBool(v, true)
+	m := NullIfBool(v, v)
+
+	assert.True(t, n.Valid)
+	assert.Equal(t, n.Bool, v)
+	assert.False(t, m.Valid)
+	assert.Equal(t, m.Bool, v)
 }
 
 func TestInvalidNullTime(t *testing.T) {

@@ -33,6 +33,9 @@ func (u UnsafeString) Value() (driver.Value, error) {
 // DEFAULT SQL value
 const DEFAULT = UnsafeString("DEFAULT")
 
+// EXCLUDED SQL value in reference to special table for ON CONFLICT
+const EXCLUDED = UnsafeString("EXCLUDED.")
+
 // NOW SQL value
 const NOW = UnsafeString("NOW()")
 
@@ -66,9 +69,19 @@ func NullStringFrom(v string) NullString {
 	return NullString{sql.NullString{String: v, Valid: true}}
 }
 
+// NullIfString creates a NullString invalid on equivalency
+func NullIfString(v1 string, v2 string) NullString {
+	return NullString{sql.NullString{String: v1, Valid: v1 != v2}}
+}
+
 // NullFloat64From creates a valid NullFloat64
 func NullFloat64From(v float64) NullFloat64 {
 	return NullFloat64{sql.NullFloat64{Float64: v, Valid: true}}
+}
+
+// NullIfFloat64 creates a NullFloat64 invalid on equivalency
+func NullIfFloat64(v1 float64, v2 float64) NullFloat64 {
+	return NullFloat64{sql.NullFloat64{Float64: v1, Valid: v1 != v2}}
 }
 
 // NullInt64From creates a valid NullInt64
@@ -76,14 +89,29 @@ func NullInt64From(v int64) NullInt64 {
 	return NullInt64{sql.NullInt64{Int64: v, Valid: true}}
 }
 
+// NullIfInt64 creates a NullInt64 invalid on equivalency
+func NullIfInt64(v1 int64, v2 int64) NullInt64 {
+	return NullInt64{sql.NullInt64{Int64: v1, Valid: v1 != v2}}
+}
+
 // NullTimeFrom creates a valid NullTime
 func NullTimeFrom(v time.Time) NullTime {
 	return NullTime{pq.NullTime{Time: v, Valid: true}}
 }
 
+// NullIfTime creates a NullTime invalid on equivalency
+func NullIfTime(v1 time.Time, v2 time.Time) NullTime {
+	return NullTime{pq.NullTime{Time: v1, Valid: !v1.Equal(v2)}}
+}
+
 // NullBoolFrom creates a valid NullBool
 func NullBoolFrom(v bool) NullBool {
 	return NullBool{sql.NullBool{Bool: v, Valid: true}}
+}
+
+// NullIfBool creates a NullBool invalid on equivalency
+func NullIfBool(v1 bool, v2 bool) NullBool {
+	return NullBool{sql.NullBool{Bool: v1, Valid: v1 != v2}}
 }
 
 // JSONFromString creates a JSON type from JSON encoded string.
