@@ -80,6 +80,10 @@ func writeCommaFragmentsToSQL(buf common.BufferWriter, fragments []*whereFragmen
 	return writeFragmentsToSQL(", ", false, buf, fragments, args, pos)
 }
 
+func writeConcatFragmentsToSQL(buf common.BufferWriter, fragments []*whereFragment, args *[]interface{}, pos *int64) error {
+	return writeFragmentsToSQL(" ", false, buf, fragments, args, pos)
+}
+
 // Invariant: only called when len(fragments) > 0
 func writeFragmentsToSQL(delimiter string, addParens bool, buf common.BufferWriter, fragments []*whereFragment, args *[]interface{}, pos *int64) error {
 	hasConditions := false

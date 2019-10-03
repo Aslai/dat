@@ -137,9 +137,6 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 	if len(b.columns) == 0 {
 		return NewDatSQLError("no columns specified")
 	}
-	if len(b.table) == 0 && b.innerSQL == nil {
-		return NewDatSQLError("no table specified")
-	}
 
 	buf := bufPool.Get()
 	defer bufPool.Put(buf)
@@ -263,14 +260,20 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 		b.innerSQL.WriteRelativeArgs(buf, &args, &placeholderStartPos)
 	} else {
 		whereFragments := b.whereFragments
-		if b.table != "" {
+		from := ""
+		fromBuf := bufPool.Get()
+		defer bufPool.Put(fromBuf)
+		if len(b.tableFragments) > 0 {
 			buf.WriteString(" FROM ")
-			buf.WriteString(b.table)
+			writeCommaFragmentsToSQL(fromBuf, b.tableFragments, &args, &placeholderStartPos)
+			writeConcatFragmentsToSQL(fromBuf, b.joinFragments, &args, &placeholderStartPos)
+			from = fromBuf.String()
+			buf.WriteString(from)
 		}
 
 		if b.scope != nil {
 			var where string
-			sql, args2 := b.scope.ToSQL(b.table)
+			sql, args2 := b.scope.ToSQL(from)
 			sql, where = splitWhere(sql)
 			buf.WriteString(sql)
 			if where != "" {
@@ -368,9 +371,33 @@ func (b *SelectDocBuilder) DistinctOn(columns ...string) *SelectDocBuilder {
 	return b
 }
 
-// From sets the table to SELECT FROM
-func (b *SelectDocBuilder) From(from string) *SelectDocBuilder {
-	b.SelectBuilder.From(from)
+// From sets the table to SELECT FROM. JOINs may also be defined here.
+func (b *SelectDocBuilder) From(fromStr string, args ...interface{}) *SelectDocBuilder {
+	b.SelectBuilder.From(fromStr, args...)
+	return b
+}
+
+// Join appends an inner join to a FROM
+func (b *SelectDocBuilder) Join(joinStr string, args ...interface{}) *SelectDocBuilder {
+	b.SelectBuilder.Join(joinStr, args...)
+	return b
+}
+
+// LeftJoin appends an left outer join to a FROM
+func (b *SelectDocBuilder) LeftJoin(joinStr string, args ...interface{}) *SelectDocBuilder {
+	b.SelectBuilder.LeftJoin(joinStr, args...)
+	return b
+}
+
+// RightJoin appends a right outer join to a FROM
+func (b *SelectDocBuilder) RightJoin(joinStr string, args ...interface{}) *SelectDocBuilder {
+	b.SelectBuilder.RightJoin(joinStr, args...)
+	return b
+}
+
+// FullOuterJoin appends a full outer join to a FROM
+func (b *SelectDocBuilder) FullOuterJoin(joinStr string, args ...interface{}) *SelectDocBuilder {
+	b.SelectBuilder.FullOuterJoin(joinStr, args...)
 	return b
 }
 

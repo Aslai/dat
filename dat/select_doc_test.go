@@ -250,3 +250,48 @@ func TestSelectDocFor(t *testing.T) {
 		) as dat__item`), stripWS(sql))
 	assert.Nil(t, args)
 }
+
+func TestSelectDocComplexFrom(t *testing.T) {
+	sql, args, err := SelectDoc("users.id").
+		From("users").
+		From("admins").
+		Where("users.id = admins.id OR $1 = users.id", 1000).
+		For("UPDATE").
+		ToSQL()
+	assert.NoError(t, err)
+	assert.Equal(t, stripWS(`
+		SELECT row_to_json(dat__item.*)
+		FROM (
+			SELECT users.id FROM users, admins WHERE (users.id = admins.id OR $1 = users.id) FOR UPDATE
+		) as dat__item
+	`), stripWS(sql))
+	assert.Exactly(t, []interface{}{1000}, args)
+}
+
+func TestSelectDocComplexFromJoin(t *testing.T) {
+	sql, args, err := SelectDoc("users.id").
+		From("users").
+		From("admins JOIN perms ON 1 = $1", 1).
+		Join("perms AS perms2 ON perms.id = perms2.id").
+		LeftJoin("users AS other_admins ON other_admins.role = perms.id OR $1 = 10", 30).
+		RightJoin("something ON something.id = users.something_id").
+		FullOuterJoin("other_thing ON other_thing.id = users.other_thing_id AND $1 = 1", 5).
+		Where("users.id = admins.id").
+		For("UPDATE").
+		ToSQL()
+	assert.NoError(t, err)
+	assert.Equal(t, stripWS(`
+		SELECT row_to_json(dat__item.*)
+		FROM (
+			SELECT users.id
+			FROM users,
+			admins JOIN perms ON 1 = $1
+			INNER JOIN perms AS perms2 ON perms.id = perms2.id
+			LEFT JOIN users AS other_admins ON other_admins.role = perms.id OR $2 = 10
+			RIGHT JOIN something ON something.id = users.something_id
+			FULL OUTER JOIN other_thing ON other_thing.id = users.other_thing_id AND $3 = 1
+			WHERE (users.id = admins.id) FOR UPDATE
+		) as dat__item
+	`), stripWS(sql))
+	assert.Exactly(t, []interface{}{1, 30, 5}, args)
+}

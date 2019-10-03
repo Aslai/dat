@@ -11,7 +11,8 @@ type SelectBuilder struct {
 	isInterpolated  bool
 	columns         []string
 	fors            []string
-	table           string
+	tableFragments  []*whereFragment
+	joinFragments   []*whereFragment
 	whereFragments  []*whereFragment
 	groupBys        []string
 	havingFragments []*whereFragment
@@ -56,9 +57,44 @@ func (b *SelectBuilder) DistinctOn(columns ...string) *SelectBuilder {
 }
 
 // From sets the table to SELECT FROM. JOINs may also be defined here.
-func (b *SelectBuilder) From(from string) *SelectBuilder {
-	b.table = from
+func (b *SelectBuilder) From(fromStr string, args ...interface{}) *SelectBuilder {
+	fragment, err := newWhereFragment(fromStr, args)
+	if err != nil {
+		b.err = err
+		return b
+	}
+	b.tableFragments = append(b.tableFragments, fragment)
 	return b
+}
+
+func (b *SelectBuilder) implJoin(joinStr string, args ...interface{}) *SelectBuilder {
+	fragment, err := newWhereFragment(joinStr, args)
+	if err != nil {
+		b.err = err
+		return b
+	}
+	b.joinFragments = append(b.joinFragments, fragment)
+	return b
+}
+
+// Join appends an inner join to a FROM
+func (b *SelectBuilder) Join(joinStr string, args ...interface{}) *SelectBuilder {
+	return b.implJoin("INNER JOIN "+joinStr, args...)
+}
+
+// LeftJoin appends an left outer join to a FROM
+func (b *SelectBuilder) LeftJoin(joinStr string, args ...interface{}) *SelectBuilder {
+	return b.implJoin("LEFT JOIN "+joinStr, args...)
+}
+
+// RightJoin appends a right outer join to a FROM
+func (b *SelectBuilder) RightJoin(joinStr string, args ...interface{}) *SelectBuilder {
+	return b.implJoin("RIGHT JOIN "+joinStr, args...)
+}
+
+// FullOuterJoin appends a full outer join to a FROM
+func (b *SelectBuilder) FullOuterJoin(joinStr string, args ...interface{}) *SelectBuilder {
+	return b.implJoin("FULL OUTER JOIN "+joinStr, args...)
 }
 
 // For adds FOR clause to SELECT.
@@ -153,8 +189,8 @@ func (b *SelectBuilder) ToSQL() (string, []interface{}, error) {
 	if len(b.columns) == 0 {
 		return NewDatSQLError("no columns specified")
 	}
-	if len(b.table) == 0 {
-		return NewDatSQLError("no table specified")
+	if len(b.tableFragments) == 0 && len(b.joinFragments) > 0 {
+		return NewDatSQLError("joins may only be attached if a from target is specified")
 	}
 
 	buf := bufPool.Get()
@@ -185,14 +221,22 @@ func (b *SelectBuilder) ToSQL() (string, []interface{}, error) {
 		buf.WriteString(s)
 	}
 
-	buf.WriteString(" FROM ")
-	buf.WriteString(b.table)
-
 	var placeholderStartPos int64 = 1
+	from := ""
+	fromBuf := bufPool.Get()
+	defer bufPool.Put(fromBuf)
+	if len(b.tableFragments) > 0 {
+		buf.WriteString(" FROM ")
+		writeCommaFragmentsToSQL(fromBuf, b.tableFragments, &args, &placeholderStartPos)
+		writeConcatFragmentsToSQL(fromBuf, b.joinFragments, &args, &placeholderStartPos)
+		from = fromBuf.String()
+		buf.WriteString(from)
+	}
+
 	whereFragments := b.whereFragments
 	if b.scope != nil {
 		var where string
-		sql, args2 := b.scope.ToSQL(b.table)
+		sql, args2 := b.scope.ToSQL(from)
 		sql, where = splitWhere(sql)
 		buf.WriteString(sql)
 		if where != "" {
