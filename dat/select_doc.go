@@ -266,6 +266,7 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 		if len(b.tableFragments) > 0 {
 			buf.WriteString(" FROM ")
 			writeCommaFragmentsToSQL(fromBuf, b.tableFragments, &args, &placeholderStartPos)
+			buf.WriteString(" ")
 			writeConcatFragmentsToSQL(fromBuf, b.joinFragments, &args, &placeholderStartPos)
 			from = fromBuf.String()
 			buf.WriteString(from)
