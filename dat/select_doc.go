@@ -138,6 +138,10 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 		return NewDatSQLError("no columns specified")
 	}
 
+	if len(b.tableFragments) == 0 && len(b.joinFragments) > 0 {
+		return NewDatSQLError("joins may only be attached if a from target is specified")
+	}
+
 	buf := bufPool.Get()
 	defer bufPool.Put(buf)
 	var args []interface{}
