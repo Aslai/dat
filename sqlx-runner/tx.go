@@ -29,13 +29,14 @@ type Tx struct {
 	IsRollbacked bool
 	state        int
 	stateStack   []int
+	timer        *time.Timer
 }
 
 // WrapSqlxTx creates a Tx from a sqlx.Tx
 func WrapSqlxTx(tx *sqlx.Tx) *Tx {
 	newtx := &Tx{Tx: tx, Queryable: &Queryable{tx}}
 	if dat.Strict {
-		time.AfterFunc(1*time.Minute, func() {
+		newtx.timer = time.AfterFunc(1*time.Minute, func() {
 			if !newtx.IsRollbacked && newtx.state == txPending {
 				panic("A database transaction was not closed!")
 			}
@@ -194,4 +195,15 @@ func (tx *Tx) popState() {
 	var val int
 	val, tx.stateStack = tx.stateStack[len(tx.stateStack)-1], tx.stateStack[:len(tx.stateStack)-1]
 	tx.state = val
+}
+
+// MoreTime will explicitly extend the time-out timer in strict mode, to enable intentionally long-running queries without sacrificing too much
+// of the benefit that the timer gives
+func (tx *Tx) MoreTime() {
+	if tx.timer != nil {
+		// Stop returns true on successful stop. On unsuccessful stop, we do not want to restart the timer.
+		if tx.timer.Stop() {
+			tx.timer.Reset(time.Minute)
+		}
+	}
 }
