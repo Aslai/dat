@@ -144,7 +144,7 @@ func (b *SelectDocBuilder) Whitelist(columns ...string) *SelectDocBuilder {
 		if c[len(c)-1] == '*' {
 			matchColumns = append(matchColumns, c[:len(c)-1])
 		} else {
-			eqColumns = append(matchColumns, c)
+			eqColumns = append(eqColumns, c)
 		}
 	}
 	argList := make([]**subInfo, 0, len(b.subQueriesMany)+len(b.subQueriesOne)+len(b.subQueriesVector)+len(b.subQueriesScalar)) // Double pointer so that we can both nullify our entry in this list as well as the list that the argument is from
