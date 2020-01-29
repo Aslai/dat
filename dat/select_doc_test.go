@@ -295,3 +295,33 @@ func TestSelectDocComplexFromJoin(t *testing.T) {
 	`), stripWS(sql))
 	assert.Exactly(t, []interface{}{1, 30, 5}, args)
 }
+
+func TestSelectDocWhitelist(t *testing.T) {
+	sql, args, err := SelectDoc("b", "c").
+		Many("f", `SELECT g, h FROM f WHERE id= $1`, 4).
+		Many("x", `SELECT id, y, z FROM x`).
+		Vector("y", `SELECT id FROM x`).
+		One("foo", `SELECT id FROM x`).
+		Scalar("z", `SELECT id FROM x`).
+		From("a").
+		Whitelist("f*", "x").
+		Where("d=$1", 4).
+		ToSQL()
+	assert.NoError(t, err)
+
+	expected := `
+	SELECT row_to_json(dat__item.*)
+	FROM (
+		SELECT
+			b,
+			c,
+			(SELECT array_agg(dat__f.*) FROM (SELECT g,h FROM f WHERE id=$1) AS dat__f) AS "f",
+			(SELECT array_agg(dat__x.*) FROM (SELECT id,y,z FROM x) AS dat__x) AS "x",
+			(SELECT row_to_json(dat__foo.*) FROM (SELECT id FROM x) AS dat__foo) AS "foo"
+		FROM a
+		WHERE (d=$2)
+	) as dat__item
+	`
+	assert.Equal(t, stripWS(expected), stripWS(sql))
+	assert.Equal(t, []interface{}{4, 4}, args)
+}

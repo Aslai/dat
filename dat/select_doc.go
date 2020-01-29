@@ -127,6 +127,62 @@ func (b *SelectDocBuilder) Union(sqlOrBuilder interface{}, a ...interface{}) *Se
 	return b
 }
 
+// Whitelist will drop any named columns from the query that are not included in the whitelist. An empty parameter list is a no-op. Columns with a trailing * character are treated as a prefix match instead of whole-word match. This does _not_ affect union queries.
+func (b *SelectDocBuilder) Whitelist(columns ...string) *SelectDocBuilder {
+	if len(columns) == 0 {
+		return b
+	}
+	matchColumns := make([]string, 0, len(columns))
+	eqColumns := make([]string, 0, len(columns))
+	for _, c := range columns {
+		if len(c) == 0 {
+			continue
+		}
+		if c == "*" {
+			return b
+		}
+		if c[len(c)-1] == '*' {
+			matchColumns = append(matchColumns, c[:len(c)-1])
+		} else {
+			eqColumns = append(matchColumns, c)
+		}
+	}
+	argList := make([]**subInfo, 0, len(b.subQueriesMany)+len(b.subQueriesOne)+len(b.subQueriesVector)+len(b.subQueriesScalar)) // Double pointer so that we can both nullify our entry in this list as well as the list that the argument is from
+	for i := range b.subQueriesMany {
+		argList = append(argList, &b.subQueriesMany[i])
+	}
+	for i := range b.subQueriesOne {
+		argList = append(argList, &b.subQueriesOne[i])
+	}
+	for i := range b.subQueriesVector {
+		argList = append(argList, &b.subQueriesVector[i])
+	}
+	for i := range b.subQueriesScalar {
+		argList = append(argList, &b.subQueriesScalar[i])
+	}
+	for i, arg := range argList {
+		for _, c := range matchColumns {
+			if len(c) <= len((*arg).alias) && (*arg).alias[:len(c)] == c {
+				// Prefix matches, remove from the list
+				argList[i] = nil
+			}
+		}
+		if argList[i] != nil {
+			for _, c := range eqColumns {
+				if (*arg).alias == c {
+					// Column matches, remove from the list
+					argList[i] = nil
+				}
+			}
+		}
+		if argList[i] != nil {
+			// No match found, do an indirect erase
+			*argList[i] = nil
+		}
+	}
+	return b
+}
+
 // ToSQL serialized the SelectBuilder to a SQL string
 // It returns the string with placeholders and a slice of query arguments
 func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
@@ -217,6 +273,9 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 	*/
 
 	for _, sub := range b.subQueriesMany {
+		if sub == nil {
+			continue
+		}
 		buf.WriteString(", (SELECT array_agg(dat__")
 		buf.WriteString(sub.alias)
 		buf.WriteString(".*) FROM (")
@@ -228,6 +287,9 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 	}
 
 	for _, sub := range b.subQueriesVector {
+		if sub == nil {
+			continue
+		}
 		buf.WriteString(", (SELECT array_agg(dat__")
 		buf.WriteString(sub.alias)
 		buf.WriteString(".dat__scalar) FROM (")
@@ -239,6 +301,9 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 	}
 
 	for _, sub := range b.subQueriesOne {
+		if sub == nil {
+			continue
+		}
 		buf.WriteString(", (SELECT row_to_json(dat__")
 		buf.WriteString(sub.alias)
 		buf.WriteString(".*) FROM (")
@@ -250,6 +315,9 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 	}
 
 	for _, sub := range b.subQueriesScalar {
+		if sub == nil {
+			continue
+		}
 		buf.WriteString(", (SELECT dat__")
 		buf.WriteString(sub.alias)
 		buf.WriteString(".dat__scalar FROM (")
