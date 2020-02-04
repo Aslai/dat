@@ -200,7 +200,7 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 		return NewDatSQLErr(b.err)
 	}
 
-	if len(b.columns) == 0 {
+	if len(b.columns)+len(b.subQueriesMany)+len(b.subQueriesOne)+len(b.subQueriesScalar)+len(b.subQueriesVector) == 0 {
 		return NewDatSQLError("no columns specified")
 	}
 
