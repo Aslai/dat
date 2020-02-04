@@ -3,6 +3,7 @@ package postgres
 import (
 	"bytes"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -148,5 +149,68 @@ func (pd *Postgres) WriteFormattedTime(buf common.BufferWriter, t time.Time) {
 
 	if bc {
 		buf.WriteString(" BC")
+	}
+}
+
+// SQLType is called by WriteReflectedType before any other conversion is considered. This allows for types which implement Scan/Value to also provide their own SQL type name
+type SQLType interface {
+	SQLType() string
+}
+
+// WriteReflectedType will write a Postgres-specific type name based on a primitive type given by r
+func (pd *Postgres) WriteReflectedType(buf common.BufferWriter, t interface{}) {
+	hasVal := true
+	var val reflect.Value
+	var typ reflect.Type
+	switch r := t.(type) {
+	case reflect.Value:
+		val = r
+	case reflect.Type:
+		hasVal = false
+		typ = r
+	default:
+		val = reflect.ValueOf(t)
+	}
+	if !hasVal {
+		val = reflect.New(typ).Elem()
+	}
+	call, ok := val.Interface().(SQLType)
+	if ok {
+		buf.WriteString(call.SQLType())
+		return
+	}
+	if typ.ConvertibleTo(reflect.TypeOf(time.Time{})) {
+		buf.WriteString("timestamptz")
+		return
+	}
+	typ = val.Type()
+	switch typ.Kind() {
+	case reflect.Interface:
+		pd.WriteReflectedType(buf, typ.Elem())
+	case reflect.Array, reflect.Slice:
+		pd.WriteReflectedType(buf, typ.Elem())
+		buf.WriteString("[]")
+	case reflect.Ptr:
+		pd.WriteReflectedType(buf, typ.Elem())
+	case reflect.Bool:
+		buf.WriteString("bool")
+	case reflect.Float32:
+		buf.WriteString("float")
+	case reflect.Float64:
+		buf.WriteString("double precision")
+	case reflect.Int16, reflect.Int8:
+		buf.WriteString("smallint")
+	case reflect.Int32:
+		buf.WriteString("integer")
+	case reflect.Int64, reflect.Int:
+		buf.WriteString("bigint")
+	case reflect.String:
+		buf.WriteString("text")
+	case reflect.Uint, reflect.Uint32, reflect.Uint64:
+		buf.WriteString("bigint")
+	case reflect.Uint16:
+		buf.WriteString("integer")
+	case reflect.Uint8:
+		buf.WriteString("smallint")
 	}
 }

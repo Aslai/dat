@@ -17,4 +17,6 @@ type SQLDialect interface {
 	WriteIdentifier(buf common.BufferWriter, column string)
 	// WriteFormattedTime writes a time formatted for the database
 	WriteFormattedTime(buf common.BufferWriter, t time.Time)
+	// WriteReflectedType writes a dialect-specfic representation of a given Go type or value
+	WriteReflectedType(buf common.BufferWriter, t interface{})
 }

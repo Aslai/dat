@@ -1,5 +1,10 @@
 package dat
 
+import (
+	"fmt"
+	"reflect"
+)
+
 type subInfo struct {
 	*Expression
 	alias string
@@ -66,7 +71,12 @@ func storeExpr(destination *[]*subInfo, name string, column string, sqlOrBuilder
 
 // With loads a sub query that will be inserted as a "with" table
 func (b *SelectDocBuilder) With(column string, sqlOrBuilder interface{}, a ...interface{}) *SelectDocBuilder {
-	b.err = storeExpr(&b.subQueriesWith, "SelectDocBuilder.With", column, sqlOrBuilder, a...)
+	if reflect.TypeOf(sqlOrBuilder).Kind() == reflect.Slice {
+		sqlOrBuilder, a, b.err = arrayToTable(sqlOrBuilder)
+	}
+	if b.err == nil {
+		b.err = storeExpr(&b.subQueriesWith, "SelectDocBuilder.With", column, sqlOrBuilder, a...)
+	}
 	return b
 }
 
@@ -534,4 +544,76 @@ func (b *SelectDocBuilder) Offset(offset uint64) *SelectDocBuilder {
 func (b *SelectDocBuilder) Paginate(page, perPage uint64) *SelectDocBuilder {
 	b.SelectBuilder.Paginate(page, perPage)
 	return b
+}
+
+// arrayToTable accepts an array of structs or scalars and returns a query + args that can be embedded in a sub-table or query. If a struct array is passed,
+// then `db` struct tags will inform the aliases for each column. Otherwise, the alias of the column will be `data`.
+func arrayToTable(contents interface{}) (string, []interface{}, error) {
+	val := reflect.ValueOf(contents)
+	typ := val.Type()
+	if typ.Kind() != reflect.Slice {
+		return "", nil, NewError("arrayToTable can only take slices")
+	}
+	innerTyp := typ.Elem()
+	if innerTyp.Kind() == reflect.Ptr {
+		innerTyp = innerTyp.Elem()
+	}
+	buf := bufPool.Get()
+	defer bufPool.Put(buf)
+	var args []interface{}
+	var placeholderStartPos int64 = 1
+
+	if innerTyp.Kind() != reflect.Struct {
+		buf.WriteString("SELECT UNNEST(ARRAY[")
+		for i := 0; i < val.Len(); i++ {
+			if i != 0 {
+				buf.WriteRune(',')
+			}
+			buf.WriteString(fmt.Sprintf("$%d", placeholderStartPos))
+			args = append(args, val.Index(i).Interface())
+			placeholderStartPos++
+		}
+		buf.WriteString("]::")
+		Dialect.WriteReflectedType(buf, reflect.SliceOf(innerTyp))
+		buf.WriteString(") AS data ")
+		return buf.String(), args, nil
+	}
+	writtenArrays := 0
+	buf.WriteString("SELECT ")
+	for i := 0; i < innerTyp.NumField(); i++ {
+		field := innerTyp.Field(i)
+		alias := field.Tag.Get("db")
+		if alias != "" {
+			switch field.Type.Kind() {
+			case reflect.Struct:
+				return "", nil, NewError("Temporary tables cannot be built from nested structs")
+			}
+			if writtenArrays != 0 {
+				buf.WriteRune(',')
+			}
+			writtenArrays++
+			buf.WriteString(" UNNEST(ARRAY[")
+			for j := 0; j < val.Len(); j++ {
+				if j != 0 {
+					buf.WriteRune(',')
+				}
+				value := val.Index(j)
+				if value.Kind() == reflect.Ptr {
+					if value.IsNil() {
+						buf.WriteString("NULL")
+						continue
+					}
+					value = value.Elem()
+				}
+				buf.WriteString(fmt.Sprintf("$%d", placeholderStartPos))
+				placeholderStartPos++
+				args = append(args, value.Field(i).Interface())
+			}
+			buf.WriteString("]::")
+			Dialect.WriteReflectedType(buf, reflect.SliceOf(field.Type))
+			buf.WriteString(") AS ")
+			writeQuotedIdentifier(buf, alias)
+		}
+	}
+	return buf.String(), args, nil
 }

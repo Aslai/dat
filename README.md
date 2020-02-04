@@ -32,6 +32,9 @@
         One("account", `SELECT balance FROM accounts WHERE user_id = users.id`).
         // Scalar embeds a single value directly in the parent object, rather than a nested object
         Scalar("comment_total", `SELECT count(1) FROM comments WHERE id = users.id`).
+        // With embeds another SQL query or Executable Dat object as an inline table. An array
+        // of scalars or structs may also be used to feed structured data into a query.
+        With("temp", "select 1, 2, 3").
         From("users").
         Where("id = $1", 4).
         QueryStruct(&obj) // obj must be agreeable with json.Unmarshal()

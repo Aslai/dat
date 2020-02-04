@@ -325,3 +325,154 @@ func TestSelectDocWhitelist(t *testing.T) {
 	assert.Equal(t, stripWS(expected), stripWS(sql))
 	assert.Equal(t, []interface{}{4, 4}, args)
 }
+
+func TestSelectDocWithScalarArray(t *testing.T) {
+	sql, args, err := SelectDoc("data").
+		From("foo").
+		With("foo", []string{"Mary", "had", "a", "little", "lamb"}).
+		Where("$1=9", 9).
+		ToSQL()
+	assert.NoError(t, err)
+
+	expected := `
+	WITH foo AS (
+		SELECT UNNEST(ARRAY[$1, $2, $3, $4, $5]::text[]) AS data
+	)
+	SELECT row_to_json(dat__item.*)
+	FROM (
+		SELECT
+			data
+		FROM foo
+		WHERE ($6=9)
+	) as dat__item
+	`
+	assert.Equal(t, stripWS(expected), stripWS(sql))
+	assert.Equal(t, []interface{}{"Mary", "had", "a", "little", "lamb", 9}, args)
+}
+
+func TestSelectDocWithStructArray(t *testing.T) {
+	type dataType struct {
+		ID   int    `db:"id"`
+		Name string `db:"name"`
+	}
+	data := []*dataType{
+		&dataType{
+			ID:   1,
+			Name: "John Doe",
+		},
+		nil,
+		&dataType{
+			ID:   4,
+			Name: "Mary Jane",
+		},
+		&dataType{
+			ID:   19,
+			Name: "Curious George",
+		},
+	}
+	sql, args, err := SelectDoc("id, name").
+		From("richData").
+		With("richData", data).
+		Where("$1=9", 9).
+		ToSQL()
+	assert.NoError(t, err)
+
+	expected := `
+	WITH richData AS (
+		SELECT
+			UNNEST(ARRAY[$1, NULL, $2, $3]::bigint[]) AS "id",
+			UNNEST(ARRAY[$4, NULL, $5, $6]::text[]) AS "name"
+	)
+	SELECT row_to_json(dat__item.*)
+	FROM (
+		SELECT
+			id, name
+		FROM richData
+		WHERE ($7=9)
+	) as dat__item
+	`
+	assert.Equal(t, stripWS(expected), stripWS(sql))
+	assert.Equal(t, []interface{}{1, 4, 19, "John Doe", "Mary Jane", "Curious George", 9}, args)
+}
+
+func TestSelectDocWithEmptyStructArray(t *testing.T) {
+	type dataType struct {
+		ID   int    `db:"id"`
+		Name string `db:"name"`
+	}
+	data := []*dataType{}
+	sql, args, err := SelectDoc("id, name").
+		From("richData").
+		With("richData", data).
+		Where("$1=9", 9).
+		ToSQL()
+	assert.NoError(t, err)
+
+	expected := `
+	WITH richData AS (
+		SELECT
+			UNNEST(ARRAY[]::bigint[]) AS "id",
+			UNNEST(ARRAY[]::text[]) AS "name"
+	)
+	SELECT row_to_json(dat__item.*)
+	FROM (
+		SELECT
+			id, name
+		FROM richData
+		WHERE ($1=9)
+	) as dat__item
+	`
+	assert.Equal(t, stripWS(expected), stripWS(sql))
+	assert.Equal(t, []interface{}{9}, args)
+}
+
+// Implements SQLType in the Postgres dialect
+type customType int
+
+func (customType) SQLType() string {
+	return "numeric(17,2)"
+}
+
+func TestSelectDocWithCustomTypeArray(t *testing.T) {
+	type dataType struct {
+		ID    int        `db:"id"`
+		Name  string     `db:"name"`
+		Value customType `db:"value"`
+	}
+	data := []*dataType{
+		&dataType{
+			ID:    1,
+			Name:  "John Doe",
+			Value: 82,
+		},
+		&dataType{
+			ID:    4,
+			Name:  "Mary Jane",
+			Value: 44,
+		},
+	}
+	sql, args, err := SelectDoc("id, name, value").
+		From("richData").
+		With("richData", data).
+		Where("$1=9", 9).
+		ToSQL()
+	assert.NoError(t, err)
+
+	expected := `
+	WITH richData AS (
+		SELECT
+			UNNEST(ARRAY[$1, $2]::bigint[]) AS "id",
+			UNNEST(ARRAY[$3, $4]::text[]) AS "name",
+			UNNEST(ARRAY[$5, $6]::numeric(17,2)[]) AS "value"
+	)
+	SELECT row_to_json(dat__item.*)
+	FROM (
+		SELECT
+			id, name, value
+		FROM richData
+		WHERE ($7=9)
+	) as dat__item
+	`
+	assert.Equal(t, stripWS(expected), stripWS(sql))
+	assert.Equal(t, []interface{}{1, 4, "John Doe", "Mary Jane", customType(82), customType(44), 9}, args)
+}
