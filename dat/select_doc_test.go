@@ -38,6 +38,10 @@ func TestSelectDocSQLDocs(t *testing.T) {
 			SelectDoc("f", "g").
 				From("foo").
 				Where("1 = 1")).
+		UnionAll(
+			SelectDoc("l", "m").
+				From("bar").
+				Where("3 = 3")).
 		With("other", SelectDoc("h", "i").
 			From("bar").
 			Where("2 = 2")).
@@ -62,6 +66,7 @@ func TestSelectDocSQLDocs(t *testing.T) {
 		FROM a
 		WHERE (d=$2)
 		UNION SELECT f, g FROM foo WHERE (1 = 1)
+		UNION ALL SELECT l, m FROM bar WHERE (3 = 3)
 	) as dat__item
 	`
 	assert.Equal(t, stripWS(expected), stripWS(sql))

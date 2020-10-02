@@ -19,7 +19,7 @@ type SelectDocBuilder struct {
 	subQueriesVector []*subInfo
 	subQueriesScalar []*subInfo
 	innerSQL         *Expression
-	union            *Expression
+	union            []*subInfo // alias is used to encode whether or not this is a union or union all - This lets us easily preserve ordering and reuses code
 	isParent         bool
 	err              error
 }
@@ -104,36 +104,15 @@ func (b *SelectDocBuilder) Scalar(column string, sqlOrBuilder interface{}, a ...
 	return b
 }
 
+// Union will add a SQL expression to the query with a UNION directive
 func (b *SelectDocBuilder) Union(sqlOrBuilder interface{}, a ...interface{}) *SelectDocBuilder {
-	switch t := sqlOrBuilder.(type) {
-	default:
-		b.err = NewError("SelectDocBuilder.Union: sqlOrbuilder accepts only {string, Builder, *SelectDocBuilder} type")
-	case *JSQLBuilder:
-		t.isParent = false
-		sql, args, err := t.ToSQL()
-		if err != nil {
-			b.err = err
-			return b
-		}
-		b.union = Expr(sql, args...)
-	case *SelectDocBuilder:
-		t.isParent = false
-		sql, args, err := t.ToSQL()
-		if err != nil {
-			b.err = err
-			return b
-		}
-		b.union = Expr(sql, args...)
-	case Builder:
-		sql, args, err := t.ToSQL()
-		if err != nil {
-			b.err = err
-			return b
-		}
-		b.union = Expr(sql, args...)
-	case string:
-		b.union = Expr(t, a...)
-	}
+	b.err = storeExpr(&b.union, "SelectDocBuilder.Union", " ", sqlOrBuilder, a...)
+	return b
+}
+
+// UnionAll will add a SQL expression to the query with a UNION ALL directive
+func (b *SelectDocBuilder) UnionAll(sqlOrBuilder interface{}, a ...interface{}) *SelectDocBuilder {
+	b.err = storeExpr(&b.union, "SelectDocBuilder.UnionAll", " ALL ", sqlOrBuilder, a...)
 	return b
 }
 
@@ -383,6 +362,17 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 		// 	writeScopeCondition(buf, whereFragment, &args, &placeholderStartPos)
 		// }
 
+		for _, sub := range b.union {
+			if sub == nil {
+				continue
+			}
+			buf.WriteString(" UNION ")
+			buf.WriteString(sub.alias)
+			buf.WriteString(" ")
+			sub.WriteRelativeArgs(buf, &args, &placeholderStartPos)
+			buf.WriteString(" ")
+		}
+
 		if len(b.groupBys) > 0 {
 			buf.WriteString(" GROUP BY ")
 			for i, s := range b.groupBys {
@@ -421,11 +411,6 @@ func (b *SelectDocBuilder) ToSQL() (string, []interface{}, error) {
 				buf.WriteString(s)
 			}
 		}
-	}
-
-	if b.union != nil {
-		buf.WriteString(" UNION ")
-		b.union.WriteRelativeArgs(buf, &args, &placeholderStartPos)
 	}
 
 	if b.isParent {
