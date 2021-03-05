@@ -5,7 +5,7 @@ import (
 
 	"gopkg.in/stretchr/testify.v1/assert"
 
-	"github.com/mgutz/jo"
+	"github.com/matcherino/jo"
 )
 
 func TestQueryObject(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mgutz/jo"
-	"github.com/mgutz/dat/dat"
+	"github.com/matcherino/jo"
+	"github.com/matcherino/dat/dat"
 	"gopkg.in/stretchr/testify.v1/assert"
 )
 

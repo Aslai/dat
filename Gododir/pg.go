@@ -7,7 +7,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/mgutz/ansi"
-	"github.com/mgutz/str"
+	"github.com/matcherino/str"
 	do "gopkg.in/godo.v2"
 )
 

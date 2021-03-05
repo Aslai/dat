@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/mgutz/dat/dat"
+	"github.com/matcherino/dat/dat"
 )
 
 // These benchmarks compare the total cost of interpolating the SQL then

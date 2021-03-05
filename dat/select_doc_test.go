@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mgutz/str"
+	"github.com/matcherino/str"
 
 	"gopkg.in/stretchr/testify.v1/assert"
 )

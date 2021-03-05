@@ -2,10 +2,10 @@ package dat
 
 import (
 	"fmt"
-	"github.com/mgutz/str"
+	"github.com/matcherino/str"
 	"reflect"
 
-	"github.com/mgutz/dat/reflectx"
+	"github.com/matcherino/dat/reflectx"
 )
 
 var fieldMapper = reflectx.NewMapperTagFunc("db", nil, nil)

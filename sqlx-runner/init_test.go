@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/mgutz/logxi"
+	"github.com/matcherino/logxi"
 
-	"github.com/mgutz/dat/dat"
-	"github.com/mgutz/dat/kvs"
-	"github.com/mgutz/dat/postgres"
+	"github.com/matcherino/dat/dat"
+	"github.com/matcherino/dat/kvs"
+	"github.com/matcherino/dat/postgres"
 )
 
 var testDB *DB

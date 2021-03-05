@@ -1,6 +1,6 @@
 package runner
 
-import "github.com/mgutz/dat/dat"
+import "github.com/matcherino/dat/dat"
 
 type Team struct {
 	ID        int64  `db:"id"`

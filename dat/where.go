@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mgutz/dat/common"
+	"github.com/matcherino/dat/common"
 )
 
 // Eq is a map column -> value pairs which must be matched in a query

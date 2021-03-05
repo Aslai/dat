@@ -68,28 +68,16 @@
   name = "github.com/lib/pq"
 
 [[constraint]]
-  name = "github.com/mattn/go-isatty"
-  version = ">=0.0.2, <1.0.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/mgutz/ansi"
-
-[[constraint]]
   branch = "next"
-  name = "github.com/mgutz/jo"
+  name = "github.com/matcherino/jo"
 
 [[constraint]]
   branch = "remove-start-frame"
-  name = "github.com/mgutz/logxi"
+  name = "github.com/matcherino/logxi"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/mgutz/str"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/mitchellh/go-homedir"
+  name = "github.com/matcherino/str"
 
 [[constraint]]
   name = "github.com/pmylund/go-cache"

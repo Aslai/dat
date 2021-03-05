@@ -3,7 +3,7 @@ package runner
 import (
 	"testing"
 
-	"github.com/mgutz/dat/dat"
+	"github.com/matcherino/dat/dat"
 	"gopkg.in/stretchr/testify.v1/assert"
 )
 

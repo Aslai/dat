@@ -1,7 +1,7 @@
 package kvs
 
 import (
-	"github.com/mgutz/logxi"
+	"github.com/matcherino/logxi"
 )
 
 var logger = logxi.New("dat.cache")

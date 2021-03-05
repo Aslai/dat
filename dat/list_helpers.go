@@ -1,7 +1,7 @@
 package dat
 
 import (
-	"github.com/mgutz/dat/common"
+	"github.com/matcherino/dat/common"
 )
 
 var bufPool = common.NewBufferPool()

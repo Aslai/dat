@@ -67,6 +67,44 @@
   revision = "2704adc878c21e1329f46f6e56a1c387d788ff94"
 
 [[projects]]
+  digest = "1:4906f65b4103c0819769ba227e9f7cb9b8bab6ff643659f01c3bde8dba453ba8"
+  name = "github.com/matcherino/dat"
+  packages = [
+    "common",
+    "dat",
+    "kvs",
+    "postgres",
+    "reflectx",
+  ]
+  pruneopts = ""
+  revision = "2a78060248aef59b4cd08513f426f3fc09c87fde"
+  version = "v1.2.0"
+
+[[projects]]
+  branch = "next"
+  digest = "1:031ec7244d9ffc7eee39d001d5efd0248699638977cae96c74a66f0bdde135fa"
+  name = "github.com/matcherino/jo"
+  packages = ["."]
+  pruneopts = ""
+  revision = "7f9bea34459e5dd98023fcf384c391e4395445d0"
+
+[[projects]]
+  branch = "remove-start-frame"
+  digest = "1:d027825d9b82ead70b36919d1bb0b269f84918c876f21be0f9b8162909e954a8"
+  name = "github.com/matcherino/logxi"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ccb6fd3c076291bca831915e9717f7ca2042c66d"
+
+[[projects]]
+  branch = "master"
+  digest = "1:0e5592625794f54f33024be3de11314c04d3f8b03fadb556c9b0d30b66e9ee28"
+  name = "github.com/matcherino/str"
+  packages = ["."]
+  pruneopts = ""
+  revision = "968bf66e3da857419e4f6e71b2d5c9ae95682dc4"
+
+[[projects]]
   branch = "master"
   digest = "1:d448278d27c47149049adc61dbe8ae440eb78c4a5a469e13bfd9cae8a7384124"
   name = "github.com/mattn/go-colorable"
@@ -84,33 +122,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:50416da10e189bc201e122e20078fb8e680a439cbdd24aaece06c434b4415b60"
+  digest = "1:3755b65215b9684ca3ac2b0b8aa31e4ccee990d2222ea4a1825493da93d14ae5"
   name = "github.com/mgutz/ansi"
   packages = ["."]
   pruneopts = ""
-  revision = "9520e82c474b0a04dd04f8a40959027271bab992"
-
-[[projects]]
-  branch = "mgutz/jsql"
-  digest = "1:9ecacb816e42d388b5ec3f270d70db86b4347c44677fd39698eddb814db313c5"
-  name = "github.com/mgutz/dat"
-  packages = [
-    "common",
-    "dat",
-    "kvs",
-    "postgres",
-    "reflectx",
-  ]
-  pruneopts = ""
-  revision = "ff957736ee2c241761e6f225790927a7f5c6bc8f"
-
-[[projects]]
-  branch = "next"
-  digest = "1:e39da1ed8c527c9a9d208ac3e76ec454a8739403167a30f74511d367be039c9f"
-  name = "github.com/mgutz/jo"
-  packages = ["."]
-  pruneopts = ""
-  revision = "30f73bff055d2bb741916de28063876fe4d7b275"
+  revision = "d51e80ef957dba7f19388ca64afefbd5a096af30"
 
 [[projects]]
   branch = "remove-start-frame"
@@ -215,17 +231,6 @@
   version = "v2.0.9"
 
 [[projects]]
-  branch = "v2"
-  digest = "1:5d2e74abdf0a45186f4f6f13d6c67c3be7773af77bf8d69e1836c3ece53dcabf"
-  name = "gopkg.in/mgutz/dat.v2"
-  packages = [
-    "common",
-    "reflectx",
-  ]
-  pruneopts = ""
-  revision = "d76e4f81c4ef6aac98aca46f9f1f38a54d06fd7e"
-
-[[projects]]
   digest = "1:3926a4ec9a4ff1a072458451aa2d9b98acd059a45b38f7335d31e06c3d6a0159"
   name = "gopkg.in/stretchr/testify.v1"
   packages = ["assert"]
@@ -241,15 +246,15 @@
     "github.com/garyburd/redigo/redis",
     "github.com/jmoiron/sqlx",
     "github.com/lib/pq",
+    "github.com/matcherino/dat/common",
+    "github.com/matcherino/dat/dat",
+    "github.com/matcherino/dat/kvs",
+    "github.com/matcherino/dat/postgres",
+    "github.com/matcherino/dat/reflectx",
+    "github.com/matcherino/jo",
+    "github.com/matcherino/logxi",
+    "github.com/matcherino/str",
     "github.com/mgutz/ansi",
-    "github.com/mgutz/dat/common",
-    "github.com/mgutz/dat/dat",
-    "github.com/mgutz/dat/kvs",
-    "github.com/mgutz/dat/postgres",
-    "github.com/mgutz/dat/reflectx",
-    "github.com/mgutz/jo",
-    "github.com/mgutz/logxi",
-    "github.com/mgutz/str",
     "github.com/pmylund/go-cache",
     "github.com/satori/go.uuid",
     "gopkg.in/godo.v2",

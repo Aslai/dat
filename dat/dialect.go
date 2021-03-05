@@ -3,7 +3,7 @@ package dat
 import (
 	"time"
 
-	"github.com/mgutz/dat/common"
+	"github.com/matcherino/dat/common"
 )
 
 // Dialect is the active SQLDialect.

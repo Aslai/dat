@@ -13,8 +13,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/mgutz/dat/dat"
-	"github.com/mgutz/dat/kvs"
+	"github.com/matcherino/dat/dat"
+	"github.com/matcherino/dat/kvs"
 	guid "github.com/satori/go.uuid"
 )
 

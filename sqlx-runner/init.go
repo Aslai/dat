@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/mgutz/logxi"
-	"github.com/mgutz/dat/dat"
-	"github.com/mgutz/dat/kvs"
-	"github.com/mgutz/dat/postgres"
+	"github.com/matcherino/logxi"
+	"github.com/matcherino/dat/dat"
+	"github.com/matcherino/dat/kvs"
+	"github.com/matcherino/dat/postgres"
 )
 
 var logger logxi.Logger

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	"github.com/mgutz/dat/dat"
+	"github.com/matcherino/dat/dat"
 )
 
 // MustCreateMetaTable creates the dat__meta table or panics.

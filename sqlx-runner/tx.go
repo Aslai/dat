@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/mgutz/dat/dat"
+	"github.com/matcherino/dat/dat"
 )
 
 const (

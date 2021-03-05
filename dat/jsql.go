@@ -3,7 +3,7 @@ package dat
 import (
 	"strings"
 
-	"github.com/mgutz/str"
+	"github.com/matcherino/str"
 )
 
 // JSQLBuilder builds SQL that returns a JSON row.

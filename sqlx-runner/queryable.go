@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/mgutz/dat/dat"
+	"github.com/matcherino/dat/dat"
 )
 
 // Queryable is an object that can be queried.

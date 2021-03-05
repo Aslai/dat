@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mgutz/str"
+	"github.com/matcherino/str"
 
-	"github.com/mgutz/dat/common"
+	"github.com/matcherino/dat/common"
 )
 
 // NameMapping is the routine to use when mapping column names to struct properties
