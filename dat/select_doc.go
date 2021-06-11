@@ -38,6 +38,18 @@ func (b *SelectDocBuilder) InnerSQL(sql string, a ...interface{}) *SelectDocBuil
 	return b
 }
 
+// RemoveData will delete all requested columns from this query while leaving other portions of the query intact.
+// This is to allow the rewriting of a pre-built query to only return a small subset of data, e.g. just the ID
+func (b *SelectDocBuilder) RemoveData() *SelectDocBuilder {
+	b.subQueriesMany = nil
+	b.subQueriesOne = nil
+	b.subQueriesVector = nil
+	b.subQueriesScalar = nil
+	b.distinctColumns = nil
+	b.columns = nil
+	return b
+}
+
 func storeExpr(destination *[]*subInfo, name string, column string, sqlOrBuilder interface{}, a ...interface{}) error {
 	var err error
 	switch t := sqlOrBuilder.(type) {
