@@ -50,6 +50,41 @@ func (b *SelectDocBuilder) RemoveData() *SelectDocBuilder {
 	return b
 }
 
+// Copy will produce an independent copy of the SelectDocBuilder such that mutating the copy will not affect the
+// original object
+func (b *SelectDocBuilder) Copy() *SelectDocBuilder {
+	return &SelectDocBuilder{
+		SelectBuilder: &SelectBuilder{
+			isDistinct:      b.isDistinct,
+			distinctColumns: append([]string{}, b.distinctColumns...),
+			isInterpolated:  b.isInterpolated,
+			columns:         append([]string{}, b.columns...),
+			fors:            append([]string{}, b.fors...),
+			tableFragments:  append([]*whereFragment{}, b.tableFragments...),
+			joinFragments:   append([]*whereFragment{}, b.joinFragments...),
+			whereFragments:  append([]*whereFragment{}, b.whereFragments...),
+			groupBys:        append([]string{}, b.groupBys...),
+			havingFragments: append([]*whereFragment{}, b.havingFragments...),
+			orderBys:        append([]*whereFragment{}, b.orderBys...),
+			limitCount:      b.limitCount,
+			limitValid:      b.limitValid,
+			offsetCount:     b.offsetCount,
+			offsetValid:     b.offsetValid,
+			scope:           b.scope,
+			err:             b.err,
+		},
+		subQueriesWith:   append([]*subInfo{}, b.subQueriesWith...),
+		subQueriesMany:   append([]*subInfo{}, b.subQueriesMany...),
+		subQueriesOne:    append([]*subInfo{}, b.subQueriesOne...),
+		subQueriesVector: append([]*subInfo{}, b.subQueriesVector...),
+		subQueriesScalar: append([]*subInfo{}, b.subQueriesScalar...),
+		innerSQL:         b.innerSQL,
+		union:            append([]*subInfo{}, b.union...),
+		isParent:         b.isParent,
+		err:              b.err,
+	}
+}
+
 func storeExpr(destination *[]*subInfo, name string, column string, sqlOrBuilder interface{}, a ...interface{}) error {
 	var err error
 	switch t := sqlOrBuilder.(type) {
